@@ -305,6 +305,10 @@
         const clearButton = document.getElementById('clear-btn');
         const notificationElement = document.getElementById('notification');
         
+        // Touch control variables
+        let touchActive = false;
+        let lastTouchedCell = null;
+        
         // Boggle dice for a 5x5 grid (custom distribution with more common letters)
         const dice = [
             ['A', 'A', 'A', 'F', 'R', 'S'],
@@ -403,7 +407,7 @@
         // Render the board on the page
         function renderBoard() {
             boardElement.innerHTML = '';
-            
+    
             for (let i = 0; i < 5; i++) {
                 for (let j = 0; j < 5; j++) {
                     const cell = document.createElement('div');
@@ -463,14 +467,59 @@
                     cell.dataset.row = i;
                     cell.dataset.col = j;
                     
+                    // Click event for mouse/taps
                     cell.addEventListener('click', () => {
                         if (!state.gameActive) return;
                         toggleCellSelection(i, j);
                     });
                     
+                    // Touch events for swipe selection
+                    cell.addEventListener('touchstart', (e) => {
+                        if (!state.gameActive) return;
+                        touchActive = true;
+                        lastTouchedCell = {row: i, col: j};
+                        toggleCellSelection(i, j);
+                        e.preventDefault(); // Prevent default to avoid click event firing too
+                    });
+                    
+                    cell.addEventListener('touchmove', (e) => {
+                        if (!state.gameActive || !touchActive) return;
+                        
+                        // Get touch position
+                        const touch = e.touches[0];
+                        const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+                        
+                        // Find if we're over a cell
+                        const touchedCell = elements.find(el => el.classList.contains('cell'));
+                        
+                        if (touchedCell) {
+                            const row = parseInt(touchedCell.dataset.row);
+                            const col = parseInt(touchedCell.dataset.col);
+                            
+                            // Only process if this is a different cell than the last one we touched
+                            if (lastTouchedCell.row !== row || lastTouchedCell.col !== col) {
+                                lastTouchedCell = {row, col};
+                                toggleCellSelection(row, col);
+                            }
+                        }
+                        
+                        e.preventDefault(); // Prevent scrolling
+                    });
+                    
                     boardElement.appendChild(cell);
                 }
             }
+            
+            // Add touch end event listener to the board
+            boardElement.addEventListener('touchend', () => {
+                touchActive = false;
+                lastTouchedCell = null;
+            });
+            
+            boardElement.addEventListener('touchcancel', () => {
+                touchActive = false;
+                lastTouchedCell = null;
+            });
         }
         
         // Check if a cell is a specific type of special tile
@@ -488,6 +537,13 @@
                 // If it's the last selected cell, deselect it
                 if (cellIndex === state.selectedCells.length - 1) {
                     state.selectedCells.pop();
+                    updateCurrentWord();
+                    updateCurrentWordScore();
+                    updateBoardSelection();
+                }
+                // If we're swiping and we go back to a previously selected cell, truncate the selection
+                else if (touchActive) {
+                    state.selectedCells = state.selectedCells.slice(0, cellIndex + 1);
                     updateCurrentWord();
                     updateCurrentWordScore();
                     updateBoardSelection();

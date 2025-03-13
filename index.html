@@ -163,6 +163,19 @@
             color: #4c9ed9;
         }
         
+        #notification {
+            font-size: 16px;
+            height: 20px;
+            margin: 5px 0;
+            color: #d32f2f;
+            transition: opacity 0.5s;
+            opacity: 0;
+        }
+        
+        #notification.show {
+            opacity: 1;
+        }
+        
         #stats {
             margin-top: 20px;
         }
@@ -201,6 +214,7 @@
         <div id="board"></div>
         <div id="current-word"></div>
         <div id="word-score"></div>
+        <div id="notification"></div>
         <div id="controls">
             <button id="start-btn">Start Game</button>
             <button id="submit-btn" disabled>Submit Word</button>
@@ -222,7 +236,8 @@
             specialTiles: {},
             selectedCells: [],
             foundWords: [],
-            timeRemaining: 240,
+            wordScores: {}, // Store word scores for checking higher scoring versions
+            timeRemaining: 120,
             gameActive: false,
             timer: null
         };
@@ -238,6 +253,7 @@
         const startButton = document.getElementById('start-btn');
         const submitButton = document.getElementById('submit-btn');
         const clearButton = document.getElementById('clear-btn');
+        const notificationElement = document.getElementById('notification');
         
         // Boggle dice for a 5x5 grid (custom distribution with more common letters)
         const dice = [
@@ -275,6 +291,9 @@
             'R': 1, 'S': 1, 'T': 1, 'U': 1, 'V': 4, 'W': 4, 'X': 8, 'Y': 4, 'Z': 10
         };
 
+        // Vowels for checking adjacency to bonus tiles
+        const vowels = ['A', 'E', 'I', 'O', 'U', 'Y', 'Qu'];
+
         const DICTIONARY_URL = 'https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt';
         let dictionary = new Set();
 
@@ -292,6 +311,36 @@
 
         // Call this function when the page loads
         window.addEventListener('load', loadDictionary);
+        
+        // Check if a position has at least one adjacent vowel
+        function hasAdjacentVowel(row, col) {
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue; // Skip the cell itself
+                    
+                    const newRow = row + i;
+                    const newCol = col + j;
+                    
+                    // Check bounds
+                    if (newRow >= 0 && newRow < 5 && newCol >= 0 && newCol < 5) {
+                        if (vowels.includes(state.board[newRow][newCol])) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        
+        // Show notification message
+        function showNotification(message, duration = 2000) {
+            notificationElement.textContent = message;
+            notificationElement.classList.add('show');
+            
+            setTimeout(() => {
+                notificationElement.classList.remove('show');
+            }, duration);
+        }
         
         // Initialize the board with random letters
         function initializeBoard() {
@@ -319,29 +368,47 @@
             }
             
             // Choose random special tiles, ensuring they are all different positions
+            // and word multiplier tiles have at least one adjacent vowel
             state.specialTiles = {};
             
             // Array to keep track of positions
             const usedPositions = new Set();
             
             // Function to get a new random position that hasn't been used
-            function getRandomPosition() {
+            function getRandomPosition(requireVowelAdjacent = false) {
                 let row, col;
                 let posKey;
+                let attempts = 0;
+                const maxAttempts = 50;
                 
                 do {
                     row = Math.floor(Math.random() * 5);
                     col = Math.floor(Math.random() * 5);
                     posKey = `${row},${col}`;
+                    
+                    // For word multiplier tiles, ensure there's an adjacent vowel
+                    if (requireVowelAdjacent) {
+                        // We need to temporarily set the board position to check adjacency
+                        if (!hasAdjacentVowel(row, col)) {
+                            continue;
+                        }
+                    }
+                    
+                    attempts++;
+                    if (attempts > maxAttempts) {
+                        // Fallback to any position if we can't find one with adjacent vowel
+                        requireVowelAdjacent = false;
+                        attempts = 0;
+                    }
                 } while (usedPositions.has(posKey));
                 
                 usedPositions.add(posKey);
                 return { row, col };
             }
             
-            // Assign positions for all special tiles
-            state.specialTiles.doubleWord = getRandomPosition();
-            state.specialTiles.tripleWord = getRandomPosition();
+            // Assign positions for all special tiles, with word multipliers requiring adjacent vowels
+            state.specialTiles.doubleWord = getRandomPosition(true);
+            state.specialTiles.tripleWord = getRandomPosition(true);
             state.specialTiles.doubleLetter = getRandomPosition();
             state.specialTiles.tripleLetter = getRandomPosition();
             
@@ -497,6 +564,7 @@
             // Reset game state
             state.selectedCells = [];
             state.foundWords = [];
+            state.wordScores = {};
             state.timeRemaining = 120;
             state.gameActive = true;
             
@@ -507,6 +575,8 @@
             timeRemainingElement.textContent = 'Time: 2:00';
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
+            notificationElement.textContent = '';
+            notificationElement.classList.remove('show');
             
             // Initialize board
             initializeBoard();
@@ -556,7 +626,7 @@
         // Submit the current word
         function submitWord() {
             if (state.selectedCells.length < 3) {
-                alert('Words must be at least 3 letters long.');
+                showNotification('Words must be at least 3 letters long.');
                 return;
             }
             
@@ -568,54 +638,48 @@
             // Replace "Qu" with "QU" for dictionary lookup
             const lookupWord = word.replace(/Qu/g, 'QU');
             
-            // Check if the word is valid and not already found
-            if (isValidWord(lookupWord) && !state.foundWords.includes(word)) {
-                // Calculate word score
-                const score = calculateWordScore(state.selectedCells);
-                
+            // Calculate word score
+            const score = calculateWordScore(state.selectedCells);
+            
+            // Check if the word is valid
+            if (!isValidWord(lookupWord)) {
+                showNotification('Not a valid word!');
+                return;
+            }
+            
+            // Check if we already found this word
+            const wordIndex = state.foundWords.indexOf(word);
+            if (wordIndex !== -1) {
+                // Check if this is a higher scoring version
+                if (score > state.wordScores[word]) {
+                    // Remove the old word from display
+                    const wordElements = wordListElement.querySelectorAll('.word-item');
+                    wordElements[wordIndex].remove();
+                    
+                    // Update with new score
+                    state.wordScores[word] = score;
+                    
+                    // Add the updated word to display
+                    addWordToDisplay(word, score);
+                    
+                    // Update total score
+                    scoreElement.textContent = calculateTotalScore();
+                    
+                    showNotification('Found a higher scoring version!');
+                } else {
+                    showNotification('You already found this word!');
+                }
+            } else {
                 // Add the word to found words
                 state.foundWords.push(word);
+                state.wordScores[word] = score;
                 
                 // Add the word to the display
-                const wordItem = document.createElement('div');
-                wordItem.className = 'word-item';
-                
-                // Check for special bonuses for display text
-                let bonusText = '';
-                const hasDoubleWord = hasSpecialTile(state.selectedCells, 'doubleWord');
-                const hasTripleWord = hasSpecialTile(state.selectedCells, 'tripleWord');
-                const hasDoubleLetter = hasSpecialTile(state.selectedCells, 'doubleLetter');
-                const hasTripleLetter = hasSpecialTile(state.selectedCells, 'tripleLetter');
-                
-                // Generate bonus text by checking various combinations
-                if (hasDoubleWord && hasTripleWord) {
-                    bonusText = ' (6× Word!)';
-                } else if (hasDoubleWord) {
-                    bonusText = ' (Double Word!)';
-                } else if (hasTripleWord) {
-                    bonusText = ' (Triple Word!)';
-                }
-                
-                if (hasDoubleLetter && hasTripleLetter) {
-                    bonusText += ' (DL+TL)';
-                } else if (hasDoubleLetter) {
-                    if (!bonusText) bonusText = ' (Double Letter!)';
-                    else bonusText += ' +DL';
-                } else if (hasTripleLetter) {
-                    if (!bonusText) bonusText = ' (Triple Letter!)';
-                    else bonusText += ' +TL';
-                }
-                
-                wordItem.textContent = `${word}: ${score} points${bonusText}`;
-                wordListElement.appendChild(wordItem);
+                addWordToDisplay(word, score);
                 
                 // Update stats
                 wordCountElement.textContent = state.foundWords.length;
                 scoreElement.textContent = calculateTotalScore();
-            } else if (state.foundWords.includes(word)) {
-                alert('You already found this word!');
-            } else {
-                alert('Not a valid word!');
             }
             
             // Clear selection
@@ -623,6 +687,42 @@
             updateBoardSelection();
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
+        }
+        
+        // Add a word to the display
+        function addWordToDisplay(word, score) {
+            // Add the word to the display
+            const wordItem = document.createElement('div');
+            wordItem.className = 'word-item';
+            
+            // Check for special bonuses for display text
+            let bonusText = '';
+            const hasDoubleWord = hasSpecialTile(state.selectedCells, 'doubleWord');
+            const hasTripleWord = hasSpecialTile(state.selectedCells, 'tripleWord');
+            const hasDoubleLetter = hasSpecialTile(state.selectedCells, 'doubleLetter');
+            const hasTripleLetter = hasSpecialTile(state.selectedCells, 'tripleLetter');
+            
+            // Generate bonus text by checking various combinations
+            if (hasDoubleWord && hasTripleWord) {
+                bonusText = ' (6× Word!)';
+            } else if (hasDoubleWord) {
+                bonusText = ' (Double Word!)';
+            } else if (hasTripleWord) {
+                bonusText = ' (Triple Word!)';
+            }
+            
+            if (hasDoubleLetter && hasTripleLetter) {
+                bonusText += ' (DL+TL)';
+            } else if (hasDoubleLetter) {
+                if (!bonusText) bonusText = ' (Double Letter!)';
+                else bonusText += ' +DL';
+            } else if (hasTripleLetter) {
+                if (!bonusText) bonusText = ' (Triple Letter!)';
+                else bonusText += ' +TL';
+            }
+            
+            wordItem.textContent = `${word}: ${score} points${bonusText}`;
+            wordListElement.appendChild(wordItem);
         }
         
         // Check if a word is valid
@@ -676,34 +776,8 @@
         
         // Calculate total score from all found words
         function calculateTotalScore() {
-            let totalScore = 0;
-            
-            for (let i = 0; i < state.foundWords.length; i++) {
-                const word = state.foundWords[i];
-                const cells = [];
-                
-                // Reconstruct the cells for this word to calculate score
-                let currentRow = 0;
-                let currentCol = 0;
-                let wordIndex = 0;
-                
-                // Find this word on the board (brute force approach)
-                outer: for (let r = 0; r < 5; r++) {
-                    for (let c = 0; c < 5; c++) {
-                        const letter = state.board[r][c];
-                        if (word.startsWith(letter)) {
-                            // Try to trace the word from this starting point
-                            const path = findWordPath(word, r, c);
-                            if (path.length > 0) {
-                                totalScore += calculateWordScore(path);
-                                break outer;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            return totalScore;
+            // Simply sum up the scores in the wordScores object
+            return Object.values(state.wordScores).reduce((sum, score) => sum + score, 0);
         }
         
         // Find a valid path for a word on the board

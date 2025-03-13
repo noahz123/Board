@@ -45,6 +45,8 @@
             user-select: none;
             position: relative;
             color: #e0e0e0; /* Light grey text */
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .cell.selected {
@@ -239,7 +241,7 @@
 <body>    
     <div id="game-container">
         <div id="time-remaining">Time: 3:00</div>
-        <div id="board"></div>
+        <div id="board" spellcheck="false"></div>
         <div id="current-word"></div>
         <div id="word-score"></div>
         <div id="notification"></div>
@@ -669,8 +671,6 @@
             updateBoardSelection();
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
-            
-            // Show final score
             timeRemainingElement.textContent = 'Time\'s up!';
         }
         

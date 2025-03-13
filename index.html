@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" spellcheck="false">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,17 +13,17 @@
             background-color: #121212; /* Dark background */
             color: #e0e0e0; /* Light grey text */
         }
-        
+
         h1, h3 {
             color: #f0f0f0; /* Slightly lighter grey for headings */
             margin: 10px 0;
         }
-        
+
         #game-container {
             margin-top: 10px;
             width: 100%;
         }
-        
+
         #board {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -32,7 +32,7 @@
             width: min(350px, 95vw);
             height: min(350px, 95vw);
         }
-        
+
         .cell {
             background-color: #2a2a2a; /* Darker grey for cells */
             border: 2px solid #444; /* Darker border */
@@ -54,9 +54,8 @@
             color: #e0e0e0; /* Light grey text */
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
-            spellcheck: false;
         }
-        
+
         .cell .letter-score {
             position: absolute;
             bottom: 3px;
@@ -65,7 +64,7 @@
             font-weight: normal;
             color: #bbbbbb;
         }
-        
+
         .bonus-label, .letter-bonus-label {
             position: absolute;
             top: 3px;
@@ -73,15 +72,15 @@
             font-size: clamp(7px, 1.5vw, 9px);
             font-weight: bold;
         }
-        
+
         .bonus-label {
             color: #ff8fae;
         }
-        
+
         .letter-bonus-label {
             color: #6fb0ff;
         }
-        
+
         #controls {
             margin: 15px 0;
             display: flex;
@@ -89,7 +88,7 @@
             justify-content: center;
             gap: 5px;
         }
-        
+
         button {
             background-color: #4c9ed9;
             border: none;
@@ -100,14 +99,14 @@
             padding: clamp(8px, 2vw, 10px) clamp(12px, 3vw, 20px);
             transition: background-color 0.3s;
         }
-        
+
         #time-remaining {
             font-size: clamp(16px, 4vw, 20px);
             font-weight: bold;
             margin: 10px 0;
             color: #f0f0f0;
         }
-        
+
         #word-list {
             border: 1px solid #444;
             border-radius: 4px;
@@ -120,21 +119,21 @@
             max-width: 500px;
             background-color: #1e1e1e; /* Slightly lighter than body */
         }
-        
+
         #current-word {
             font-size: clamp(16px, 4vw, 18px);
             min-height: 24px;
             margin: 10px 0;
             color: #f0f0f0;
         }
-        
+
         #word-score {
             font-size: clamp(14px, 3vw, 16px);
             min-height: 20px;
             margin: 5px 0;
             color: #6fb0ff; /* Lighter blue */
         }
-        
+
         #notification {
             font-size: clamp(14px, 3vw, 16px);
             min-height: 20px;
@@ -143,46 +142,46 @@
             transition: opacity 0.5s;
             opacity: 0;
         }
-        
+
         #stats {
             margin-top: 15px;
             font-size: clamp(14px, 3vw, 16px);
         }
-        
+
         .word-item {
             margin: 5px 0;
             color: #d0d0d0;
             font-size: clamp(14px, 3vw, 16px);
         }
-        
+
         /* Fixed styling for 'Qu' */
         .qu-text {
             display: inline-block;
             font-size: clamp(18px, 5vw, 24px);
             line-height: 1;
         }
-        
+
         /* Media queries for better spacing on different screen sizes */
         @media (max-width: 480px) {
             body {
                 padding: 5px;
             }
-            
+
             h3 {
                 margin: 8px 0;
             }
-            
+
             #controls {
                 margin: 10px 0;
             }
-            
+
             button {
                 margin-bottom: 5px;
                 flex-grow: 1;
                 max-width: 150px;
             }
         }
-        
+
         /* Keep other existing CSS that isn't changed */
         .triple-word {
             background-color: #a33030; /* Darker red */
@@ -262,10 +261,11 @@
         }
     </style>
 </head>
-<body>    
+<body>
     <div id="game-container">
         <div id="time-remaining">Time: 3:00</div>
         <div id="board" spellcheck="false"></div>
+        <input type="text" spellcheck="false" />
         <div id="current-word"></div>
         <div id="word-score"></div>
         <div id="notification"></div>
@@ -317,7 +317,7 @@
             gameActive: false,
             timer: null
         };
-        
+
         // DOM elements
         const boardElement = document.getElementById('board');
         const currentWordElement = document.getElementById('current-word');
@@ -330,11 +330,11 @@
         const submitButton = document.getElementById('submit-btn');
         const clearButton = document.getElementById('clear-btn');
         const notificationElement = document.getElementById('notification');
-        
+
         // Touch control variables
         let touchActive = false;
         let lastTouchedCell = null;
-        
+
         // Boggle dice for a 5x5 grid (custom distribution with more common letters)
         const dice = [
             ['A', 'A', 'A', 'F', 'R', 'S'],
@@ -363,7 +363,7 @@
             ['N', 'O', 'O', 'T', 'U', 'W'],
             ['O', 'O', 'O', 'T', 'T', 'U']
         ];
-        
+
         // Scrabble letter scores
         const letterPointValues = {
             'A': 1, 'B': 3, 'C': 3, 'D': 2, 'E': 1, 'F': 4, 'G': 2, 'H': 4, 'I': 1,
@@ -391,12 +391,12 @@
 
         // Call this function when the page loads
         window.addEventListener('load', loadDictionary);
-        
+
         // Show notification message
         function showNotification(message, duration = 2000) {
             notificationElement.textContent = message;
             notificationElement.classList.add('show');
-            
+
             setTimeout(() => {
                 notificationElement.classList.remove('show');
             }, duration);
@@ -409,7 +409,7 @@
                 const j = Math.floor(Math.random() * (i + 1));
                 [shuffledDice[i], shuffledDice[j]] = [shuffledDice[j], shuffledDice[i]];
             }
-            
+
             // Create a 5x5 board with random faces from the dice
             state.board = [];
             state.letterScores = [];
@@ -425,11 +425,11 @@
                     state.letterScores[i][j] = letterPointValues[letter] || 1;
                 }
             }
-            
+
             // Render the board
             renderBoard();
         }
-        
+
         // Render the board on the page
         function renderBoard() {
             boardElement.innerHTML = '';
@@ -440,7 +440,7 @@
                     cell.className = 'cell';
                     cell.setAttribute('spellcheck', 'false');  // Add this line
                     const letter = state.board[i][j];
-                    
+
                     if (letter === 'Qu') {
                         cell.classList.add('qu');
                         // Create a span to hold the Qu text
@@ -452,13 +452,13 @@
                     } else {
                         cell.textContent = letter;
                     }
-                    
+
                     // Add letter score
                     const scoreSpan = document.createElement('span');
                     scoreSpan.className = 'letter-score';
                     scoreSpan.textContent = state.letterScores[i][j];
                     cell.appendChild(scoreSpan);
-                    
+
                     // Check if this cell is a double word tile
                     if (isSpecialTile(i, j, 'doubleWord')) {
                         cell.classList.add('double-word');
@@ -466,7 +466,7 @@
                         bonusLabel.className = 'bonus-label';
                         bonusLabel.textContent = 'DW';
                         cell.appendChild(bonusLabel);
-                    } 
+                    }
                     // Check if this cell is a triple word tile
                     else if (isSpecialTile(i, j, 'tripleWord')) {
                         cell.classList.add('triple-word');
@@ -474,7 +474,7 @@
                         bonusLabel.className = 'bonus-label';
                         bonusLabel.textContent = 'TW';
                         cell.appendChild(bonusLabel);
-                    } 
+                    }
                     // Check if this cell is a double letter tile
                     else if (isSpecialTile(i, j, 'doubleLetter')) {
                         cell.classList.add('double-letter');
@@ -482,7 +482,7 @@
                         bonusLabel.className = 'letter-bonus-label';
                         bonusLabel.textContent = 'DL';
                         cell.appendChild(bonusLabel);
-                    } 
+                    }
                     // Check if this cell is a triple letter tile
                     else if (isSpecialTile(i, j, 'tripleLetter')) {
                         cell.classList.add('triple-letter');
@@ -491,16 +491,16 @@
                         bonusLabel.textContent = 'TL';
                         cell.appendChild(bonusLabel);
                     }
-                    
+
                     cell.dataset.row = i;
                     cell.dataset.col = j;
-                    
+
                     // Click event for mouse/taps
                     cell.addEventListener('click', () => {
                         if (!state.gameActive) return;
                         toggleCellSelection(i, j);
                     });
-                    
+
                     // Touch events for swipe selection
                     cell.addEventListener('touchstart', (e) => {
                         if (!state.gameActive) return;
@@ -509,58 +509,58 @@
                         toggleCellSelection(i, j);
                         e.preventDefault(); // Prevent default to avoid click event firing too
                     });
-                    
+
                     cell.addEventListener('touchmove', (e) => {
                         if (!state.gameActive || !touchActive) return;
-                        
+
                         // Get touch position
                         const touch = e.touches[0];
                         const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-                        
+
                         // Find if we're over a cell
                         const touchedCell = elements.find(el => el.classList.contains('cell'));
-                        
+
                         if (touchedCell) {
                             const row = parseInt(touchedCell.dataset.row);
                             const col = parseInt(touchedCell.dataset.col);
-                            
+
                             // Only process if this is a different cell than the last one we touched
                             if (lastTouchedCell.row !== row || lastTouchedCell.col !== col) {
                                 lastTouchedCell = {row, col};
                                 toggleCellSelection(row, col);
                             }
                         }
-                        
+
                         e.preventDefault(); // Prevent scrolling
                     });
-                    
+
                     boardElement.appendChild(cell);
                 }
             }
-            
+
             // Add touch end event listener to the board
             boardElement.addEventListener('touchend', () => {
                 touchActive = false;
                 lastTouchedCell = null;
             });
-            
+
             boardElement.addEventListener('touchcancel', () => {
                 touchActive = false;
                 lastTouchedCell = null;
             });
         }
-        
+
         // Check if a cell is a specific type of special tile
         function isSpecialTile(row, col, tileType) {
-            return state.specialTiles[tileType].some(tile => 
+            return state.specialTiles[tileType].some(tile =>
                 tile.row === row && tile.col === col
             );
         }
-        
+
         // Toggle cell selection
         function toggleCellSelection(row, col) {
             const cellIndex = state.selectedCells.findIndex(cell => cell.row === row && cell.col === col);
-            
+
             if (cellIndex !== -1) {
                 // If it's the last selected cell, deselect it
                 if (cellIndex === state.selectedCells.length - 1) {
@@ -580,7 +580,7 @@
                 // Check if this cell is adjacent to the last selected cell or if it's the first selection
                 const isFirstSelection = state.selectedCells.length === 0;
                 const isAdjacent = isAdjacentToLastSelected(row, col);
-                
+
                 if (isFirstSelection || isAdjacent) {
                     state.selectedCells.push({ row, col });
                     updateCurrentWord();
@@ -589,18 +589,18 @@
                 }
             }
         }
-        
+
         // Check if a cell is adjacent to the last selected cell
         function isAdjacentToLastSelected(row, col) {
             if (state.selectedCells.length === 0) return true;
-            
+
             const last = state.selectedCells[state.selectedCells.length - 1];
             const rowDiff = Math.abs(row - last.row);
             const colDiff = Math.abs(col - last.col);
-            
+
             return rowDiff <= 1 && colDiff <= 1 && !(rowDiff === 0 && colDiff === 0);
         }
-        
+
         // Update the current word display
         function updateCurrentWord() {
             let word = '';
@@ -610,25 +610,25 @@
             }
             currentWordElement.textContent = word;
         }
-        
+
         // Update the current word score display
         function updateCurrentWordScore() {
             if (state.selectedCells.length === 0) {
                 wordScoreElement.textContent = '';
                 return;
             }
-            
+
             const score = calculateWordScore(state.selectedCells);
             wordScoreElement.textContent = `Value: ${score} points`;
         }
-        
+
         // Update board selection visual
         function updateBoardSelection() {
             // Clear all selections
             document.querySelectorAll('.cell').forEach(cell => {
                 cell.classList.remove('selected');
             });
-            
+
             // Add selection class to selected cells
             state.selectedCells.forEach(cell => {
                 const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
@@ -637,7 +637,7 @@
                 }
             });
         }
-        
+
         // Start the game
         function startGame() {
             // Reset game state
@@ -646,7 +646,7 @@
             state.wordScores = {};
             state.timeRemaining = 180;
             state.gameActive = true;
-            
+
             // Update UI
             wordListElement.innerHTML = '';
             wordCountElement.textContent = '0';
@@ -656,42 +656,42 @@
             wordScoreElement.textContent = '';
             notificationElement.textContent = '';
             notificationElement.classList.remove('show');
-            
+
             // Initialize board
             initializeBoard();
-            
+
             // Update button states
             startButton.disabled = true;
             submitButton.disabled = false;
             clearButton.disabled = false;
-            
+
             // Start timer
             state.timer = setInterval(updateTimer, 1000);
         }
-        
+
         // Update the timer
         function updateTimer() {
             state.timeRemaining--;
-            
+
             const minutes = Math.floor(state.timeRemaining / 60);
             const seconds = state.timeRemaining % 60;
             timeRemainingElement.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            
+
             if (state.timeRemaining <= 0) {
                 endGame();
             }
         }
-        
+
         // End the game
         function endGame() {
             state.gameActive = false;
             clearInterval(state.timer);
-            
+
             // Update button states
             startButton.disabled = false;
             submitButton.disabled = true;
             clearButton.disabled = true;
-            
+
             // Clear selection
             state.selectedCells = [];
             updateBoardSelection();
@@ -699,31 +699,31 @@
             wordScoreElement.textContent = '';
             timeRemainingElement.textContent = 'Time\'s up!';
         }
-        
+
         // Submit the current word
         function submitWord() {
             if (state.selectedCells.length < 3) {
                 showNotification('Words must be at least 3 letters long.');
                 return;
             }
-            
+
             let word = '';
             for (const cell of state.selectedCells) {
                 word += state.board[cell.row][cell.col];
             }
-            
+
             // Replace "Qu" with "QU" for dictionary lookup
             const lookupWord = word.replace(/Qu/g, 'QU');
-            
+
             // Calculate word score
             const score = calculateWordScore(state.selectedCells);
-            
+
             // Check if the word is valid
             if (!isValidWord(lookupWord)) {
                 showNotification('Not a valid word!');
                 return;
             }
-            
+
             // Check if we already found this word
             const wordIndex = state.foundWords.indexOf(word);
             if (wordIndex !== -1) {
@@ -732,16 +732,16 @@
                     // Remove the old word from display
                     const wordElements = wordListElement.querySelectorAll('.word-item');
                     wordElements[wordIndex].remove();
-                    
+
                     // Update with new score
                     state.wordScores[word] = score;
-                    
+
                     // Add the updated word to display
                     addWordToDisplay(word, score);
-                    
+
                     // Update total score
                     scoreElement.textContent = calculateTotalScore();
-                    
+
                     showNotification('Found a higher scoring version!');
                 } else {
                     showNotification('You already found this word!');
@@ -750,57 +750,57 @@
                 // Add the word to found words
                 state.foundWords.push(word);
                 state.wordScores[word] = score;
-                
+
                 // Add the word to the display
                 addWordToDisplay(word, score);
-                
+
                 // Update stats
                 wordCountElement.textContent = state.foundWords.length;
                 scoreElement.textContent = calculateTotalScore();
             }
-            
+
             // Clear selection
             state.selectedCells = [];
             updateBoardSelection();
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
         }
-        
+
         // Add a word to the display
         function addWordToDisplay(word, score) {
             // Add the word to the display
             const wordItem = document.createElement('div');
             wordItem.className = 'word-item';
-            
+
             // Check for special bonuses for display text
             wordItem.textContent = `${word}: ${score} points`;
             wordListElement.appendChild(wordItem);
         }
-        
+
         // Check if a word is valid
         function isValidWord(word) {
             return dictionary.has(word.toLowerCase());
         }
-        
+
         // Calculate score for a word based on Scrabble letter values
         function calculateWordScore(selectedCells) {
             let baseScore = 0;
             let wordMultiplier = 1;
-            
+
             // Calculate base score from letter values with letter multipliers
             for (const cell of selectedCells) {
                 let letterScore = state.letterScores[cell.row][cell.col];
-                
+
                 // Apply letter multipliers if applicable
                 if (isSpecialTile(cell.row, cell.col, 'doubleLetter')) {
                     letterScore *= 2;
                 } else if (isSpecialTile(cell.row, cell.col, 'tripleLetter')) {
                     letterScore *= 3;
                 }
-                
+
                 baseScore += letterScore;
             }
-            
+
             // Apply word multipliers if special tiles are used
             for (const cell of selectedCells) {
                 if (isSpecialTile(cell.row, cell.col, 'doubleWord')) {
@@ -809,16 +809,16 @@
                     wordMultiplier *= 3;
                 }
             }
-            
+
             return baseScore * wordMultiplier;
         }
-        
+
         // Calculate total score from all found words
         function calculateTotalScore() {
             // Simply sum up the scores in the wordScores object
             return Object.values(state.wordScores).reduce((sum, score) => sum + score, 0);
         }
-        
+
         // Clear current selection
         function clearSelection() {
             state.selectedCells = [];
@@ -826,12 +826,12 @@
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
         }
-        
+
         // Event listeners
         startButton.addEventListener('click', startGame);
         submitButton.addEventListener('click', submitWord);
         clearButton.addEventListener('click', clearSelection);
-        
+
         // Allow Enter key to submit word
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && state.gameActive) {

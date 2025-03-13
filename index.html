@@ -760,32 +760,7 @@
             wordItem.className = 'word-item';
             
             // Check for special bonuses for display text
-            let bonusText = '';
-            const hasDoubleWord = hasSpecialTile(state.selectedCells, 'doubleWord');
-            const hasTripleWord = hasSpecialTile(state.selectedCells, 'tripleWord');
-            const hasDoubleLetter = hasSpecialTile(state.selectedCells, 'doubleLetter');
-            const hasTripleLetter = hasSpecialTile(state.selectedCells, 'tripleLetter');
-            
-            // Generate bonus text by checking various combinations
-            if (hasDoubleWord && hasTripleWord) {
-                bonusText = ' (6× Word!)';
-            } else if (hasDoubleWord) {
-                bonusText = ' (Double Word!)';
-            } else if (hasTripleWord) {
-                bonusText = ' (Triple Word!)';
-            }
-            
-            if (hasDoubleLetter && hasTripleLetter) {
-                bonusText += ' (DL+TL)';
-            } else if (hasDoubleLetter) {
-                if (!bonusText) bonusText = ' (Double Letter!)';
-                else bonusText += ' +DL';
-            } else if (hasTripleLetter) {
-                if (!bonusText) bonusText = ' (Triple Letter!)';
-                else bonusText += ' +TL';
-            }
-            
-            wordItem.textContent = `${word}: ${score} points${bonusText}`;
+            wordItem.textContent = `${word}: ${score} points`;
             wordListElement.appendChild(wordItem);
         }
         

@@ -10,10 +10,12 @@
             margin: 0 auto;
             padding: 20px;
             text-align: center;
+            background-color: #121212; /* Dark background */
+            color: #e0e0e0; /* Light grey text */
         }
         
-        h1 {
-            color: #333;
+        h1, h3 {
+            color: #f0f0f0; /* Slightly lighter grey for headings */
         }
         
         #game-container {
@@ -29,8 +31,8 @@
         }
         
         .cell {
-            background-color: #f0f0f0;
-            border: 2px solid #ccc;
+            background-color: #2a2a2a; /* Darker grey for cells */
+            border: 2px solid #444; /* Darker border */
             border-radius: 8px;
             font-size: 24px;
             font-weight: bold;
@@ -42,11 +44,12 @@
             transition: background-color 0.3s;
             user-select: none;
             position: relative;
+            color: #e0e0e0; /* Light grey text */
         }
         
         .cell.selected {
-            background-color: #a0d2eb;
-            border-color: #4c9ed9;
+            background-color: #4a6d8c; /* Darker blue for selected */
+            border-color: #6c9fc9;
         }
         
         .cell .letter-score {
@@ -55,39 +58,39 @@
             right: 6px;
             font-size: 12px;
             font-weight: normal;
-            color: #666;
+            color: #bbbbbb;
         }
         
         .double-word {
-            background-color: #ffb6c1; /* Light pink */
+            background-color: #8c3f50; /* Darker pink */
         }
         
         .triple-word {
-            background-color: #ff7f7f; /* Coral red */
+            background-color: #a33030; /* Darker red */
         }
         
         .double-letter {
-            background-color: #b6e0ff; /* Light blue */
+            background-color: #304a70; /* Darker blue */
         }
         
         .triple-letter {
-            background-color: #99ccff; /* Blue */
+            background-color: #305987; /* Darker blue */
         }
         
         .double-word.selected {
-            background-color: #ff8da1;
+            background-color: #a84c60;
         }
         
         .triple-word.selected {
-            background-color: #ff6b6b;
+            background-color: #b34444;
         }
         
         .double-letter.selected {
-            background-color: #8cd3ff;
+            background-color: #3e5f8c;
         }
         
         .triple-letter.selected {
-            background-color: #7ab8ff;
+            background-color: #3e6ea6;
         }
         
         .bonus-label {
@@ -96,7 +99,7 @@
             left: 3px;
             font-size: 9px;
             font-weight: bold;
-            color: #d81b60;
+            color: #ff8fae;
         }
         
         .letter-bonus-label {
@@ -105,7 +108,7 @@
             left: 3px;
             font-size: 9px;
             font-weight: bold;
-            color: #1976d2;
+            color: #6fb0ff;
         }
         
         #controls {
@@ -129,7 +132,8 @@
         }
         
         button:disabled {
-            background-color: #cccccc;
+            background-color: #444444;
+            color: #888888;
             cursor: not-allowed;
         }
         
@@ -137,10 +141,11 @@
             font-size: 20px;
             font-weight: bold;
             margin: 10px 0;
+            color: #f0f0f0;
         }
         
         #word-list {
-            border: 1px solid #ccc;
+            border: 1px solid #444;
             border-radius: 4px;
             height: 200px;
             margin: 20px auto;
@@ -148,26 +153,28 @@
             padding: 10px;
             text-align: left;
             width: 80%;
+            background-color: #1e1e1e; /* Slightly lighter than body */
         }
         
         #current-word {
             font-size: 18px;
             height: 24px;
             margin: 10px 0;
+            color: #f0f0f0;
         }
         
         #word-score {
             font-size: 16px;
             height: 20px;
             margin: 5px 0;
-            color: #4c9ed9;
+            color: #6fb0ff; /* Lighter blue */
         }
         
         #notification {
             font-size: 16px;
             height: 20px;
             margin: 5px 0;
-            color: #d32f2f;
+            color: #ff6b6b; /* Brighter red */
             transition: opacity 0.5s;
             opacity: 0;
         }
@@ -182,11 +189,12 @@
         
         .word-item {
             margin: 5px 0;
+            color: #d0d0d0;
         }
         
         .instructions {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
+            background-color: #1e1e1e;
+            border: 1px solid #444;
             border-radius: 4px;
             margin: 20px auto;
             padding: 15px;
@@ -206,6 +214,25 @@
             display: inline-block;
             font-size: 24px;
             line-height: 1;
+        }
+        
+        /* Scrollbar customization for dark mode */
+        #word-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #word-list::-webkit-scrollbar-track {
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+        
+        #word-list::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        #word-list::-webkit-scrollbar-thumb:hover {
+            background: #666;
         }
     </style>
 </head>

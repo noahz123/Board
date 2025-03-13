@@ -343,7 +343,29 @@
             }, duration);
         }
         
-        // Initialize the board with random letters
+        // Updated function to check if a position has at least one adjacent vowel
+        function hasAdjacentVowel(row, col, board) {
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue; // Skip the cell itself
+                    
+                    const newRow = row + i;
+                    const newCol = col + j;
+                    
+                    // Check bounds
+                    if (newRow >= 0 && newRow < 5 && newCol >= 0 && newCol < 5) {
+                        // Make sure there's a letter at this position
+                        if (board[newRow] && board[newRow][newCol] && 
+                            vowels.includes(board[newRow][newCol])) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Modified initializeBoard function to ensure word multiplier tiles have adjacent vowels
         function initializeBoard() {
             // Shuffle the dice
             const shuffledDice = [...dice];
@@ -375,43 +397,53 @@
             // Array to keep track of positions
             const usedPositions = new Set();
             
-            // Function to get a new random position that hasn't been used
-            function getRandomPosition(requireVowelAdjacent = false) {
-                let row, col;
-                let posKey;
-                let attempts = 0;
-                const maxAttempts = 50;
-                
+            // First, place letter multiplier tiles (no vowel adjacency requirement)
+            function getRandomUnusedPosition() {
+                let row, col, posKey;
                 do {
                     row = Math.floor(Math.random() * 5);
                     col = Math.floor(Math.random() * 5);
                     posKey = `${row},${col}`;
-                    
-                    // For word multiplier tiles, ensure there's an adjacent vowel
-                    if (requireVowelAdjacent) {
-                        // We need to temporarily set the board position to check adjacency
-                        if (!hasAdjacentVowel(row, col)) {
-                            continue;
-                        }
-                    }
-                    
-                    attempts++;
-                    if (attempts > maxAttempts) {
-                        // Fallback to any position if we can't find one with adjacent vowel
-                        requireVowelAdjacent = false;
-                        attempts = 0;
-                    }
                 } while (usedPositions.has(posKey));
                 
                 usedPositions.add(posKey);
                 return { row, col };
             }
             
-            // Assign positions for all special tiles, with word multipliers requiring adjacent vowels
-            state.specialTiles.doubleWord = getRandomPosition(true);
-            state.specialTiles.tripleWord = getRandomPosition(true);
-            state.specialTiles.doubleLetter = getRandomPosition();
-            state.specialTiles.tripleLetter = getRandomPosition();
+            // Place letter multiplier tiles first
+            state.specialTiles.doubleLetter = getRandomUnusedPosition();
+            state.specialTiles.tripleLetter = getRandomUnusedPosition();
+            
+            // For word multiplier tiles, ensure there's an adjacent vowel
+            function getPositionWithAdjacentVowel() {
+                // Get all possible positions
+                const possiblePositions = [];
+                
+                for (let row = 0; row < 5; row++) {
+                    for (let col = 0; col < 5; col++) {
+                        const posKey = `${row},${col}`;
+                        if (!usedPositions.has(posKey) && hasAdjacentVowel(row, col, state.board)) {
+                            possiblePositions.push({ row, col });
+                        }
+                    }
+                }
+                
+                // If we found any positions with adjacent vowels, choose one randomly
+                if (possiblePositions.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * possiblePositions.length);
+                    const position = possiblePositions[randomIndex];
+                    usedPositions.add(`${position.row},${position.col}`);
+                    return position;
+                }
+                
+                // Fallback: if no position has an adjacent vowel, just get a random unused position
+                console.warn("No positions with adjacent vowels found, using random position");
+                return getRandomUnusedPosition();
+            }
+            
+            // Place word multiplier tiles
+            state.specialTiles.doubleWord = getPositionWithAdjacentVowel();
+            state.specialTiles.tripleWord = getPositionWithAdjacentVowel();
             
             // Render the board
             renderBoard();

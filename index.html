@@ -43,10 +43,14 @@
             cursor: pointer;
             transition: background-color 0.3s;
             user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
             position: relative;
             color: #e0e0e0; /* Light grey text */
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
+            spellcheck: false;
         }
         
         .cell.selected {
@@ -409,11 +413,12 @@
         // Render the board on the page
         function renderBoard() {
             boardElement.innerHTML = '';
-    
+
             for (let i = 0; i < 5; i++) {
                 for (let j = 0; j < 5; j++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
+                    cell.setAttribute('spellcheck', 'false');  // Add this line
                     const letter = state.board[i][j];
                     
                     if (letter === 'Qu') {
@@ -422,6 +427,7 @@
                         const quSpan = document.createElement('span');
                         quSpan.className = 'qu-text';
                         quSpan.textContent = 'Qu';
+                        quSpan.setAttribute('spellcheck', 'false');  // Also disable for the span
                         cell.appendChild(quSpan);
                     } else {
                         cell.textContent = letter;

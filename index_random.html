@@ -261,29 +261,7 @@
         const state = {
             board: [],
             letterScores: [],
-            specialTiles: {
-                doubleWord: [
-                    {row: 0, col: 0},
-                    {row: 4, col: 0},
-                    {row: 0, col: 4},
-                    {row: 4, col: 4}
-                ],
-                doubleLetter: [
-                    {row: 1, col: 1},
-                    {row: 1, col: 3},
-                    {row: 3, col: 1},
-                    {row: 3, col: 3}
-                ],
-                tripleLetter: [
-                    {row: 2, col: 0},
-                    {row: 0, col: 2},
-                    {row: 4, col: 2},
-                    {row: 2, col: 4}
-                ],
-                tripleWord: [
-                    {row: 2, col: 2}
-                ]
-            },
+            specialTiles: {},
             selectedCells: [],
             foundWords: [],
             wordScores: {}, // Store word scores for checking higher scoring versions
@@ -362,6 +340,26 @@
         // Call this function when the page loads
         window.addEventListener('load', loadDictionary);
         
+        // Check if a position has at least one adjacent vowel
+        function hasAdjacentVowel(row, col) {
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue; // Skip the cell itself
+                    
+                    const newRow = row + i;
+                    const newCol = col + j;
+                    
+                    // Check bounds
+                    if (newRow >= 0 && newRow < 5 && newCol >= 0 && newCol < 5) {
+                        if (vowels.includes(state.board[newRow][newCol])) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        
         // Show notification message
         function showNotification(message, duration = 2000) {
             notificationElement.textContent = message;
@@ -371,7 +369,30 @@
                 notificationElement.classList.remove('show');
             }, duration);
         }
+        
+        // Updated function to check if a position has at least one adjacent vowel
+        function hasAdjacentVowel(row, col, board) {
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue; // Skip the cell itself
+                    
+                    const newRow = row + i;
+                    const newCol = col + j;
+                    
+                    // Check bounds
+                    if (newRow >= 0 && newRow < 5 && newCol >= 0 && newCol < 5) {
+                        // Make sure there's a letter at this position
+                        if (board[newRow] && board[newRow][newCol] && 
+                            vowels.includes(board[newRow][newCol])) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
 
+        // Modified initializeBoard function to ensure word multiplier tiles have adjacent vowels
         function initializeBoard() {
             // Shuffle the dice
             const shuffledDice = [...dice];
@@ -395,6 +416,61 @@
                     state.letterScores[i][j] = letterPointValues[letter] || 1;
                 }
             }
+            
+            // Choose random special tiles, ensuring they are all different positions
+            // and word multiplier tiles have at least one adjacent vowel
+            state.specialTiles = {};
+            
+            // Array to keep track of positions
+            const usedPositions = new Set();
+            
+            // First, place letter multiplier tiles (no vowel adjacency requirement)
+            function getRandomUnusedPosition() {
+                let row, col, posKey;
+                do {
+                    row = Math.floor(Math.random() * 5);
+                    col = Math.floor(Math.random() * 5);
+                    posKey = `${row},${col}`;
+                } while (usedPositions.has(posKey));
+                
+                usedPositions.add(posKey);
+                return { row, col };
+            }
+            
+            // Place letter multiplier tiles first
+            state.specialTiles.doubleLetter = getRandomUnusedPosition();
+            state.specialTiles.tripleLetter = getRandomUnusedPosition();
+            
+            // For word multiplier tiles, ensure there's an adjacent vowel
+            function getPositionWithAdjacentVowel() {
+                // Get all possible positions
+                const possiblePositions = [];
+                
+                for (let row = 0; row < 5; row++) {
+                    for (let col = 0; col < 5; col++) {
+                        const posKey = `${row},${col}`;
+                        if (!usedPositions.has(posKey) && hasAdjacentVowel(row, col, state.board)) {
+                            possiblePositions.push({ row, col });
+                        }
+                    }
+                }
+                
+                // If we found any positions with adjacent vowels, choose one randomly
+                if (possiblePositions.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * possiblePositions.length);
+                    const position = possiblePositions[randomIndex];
+                    usedPositions.add(`${position.row},${position.col}`);
+                    return position;
+                }
+                
+                // Fallback: if no position has an adjacent vowel, just get a random unused position
+                console.warn("No positions with adjacent vowels found, using random position");
+                return getRandomUnusedPosition();
+            }
+            
+            // Place word multiplier tiles
+            state.specialTiles.doubleWord = getPositionWithAdjacentVowel();
+            state.specialTiles.tripleWord = getPositionWithAdjacentVowel();
             
             // Render the board
             renderBoard();
@@ -427,32 +503,32 @@
                     scoreSpan.textContent = state.letterScores[i][j];
                     cell.appendChild(scoreSpan);
                     
-                    // Check if this cell is a double word tile
-                    if (isSpecialTile(i, j, 'doubleWord')) {
+                    // Check for each special tile type
+                    const dw = state.specialTiles.doubleWord;
+                    const tw = state.specialTiles.tripleWord;
+                    const dl = state.specialTiles.doubleLetter;
+                    const tl = state.specialTiles.tripleLetter;
+                    
+                    // Apply appropriate styling and label based on tile type
+                    if (i === dw.row && j === dw.col) {
                         cell.classList.add('double-word');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'bonus-label';
                         bonusLabel.textContent = 'DW';
                         cell.appendChild(bonusLabel);
-                    } 
-                    // Check if this cell is a triple word tile
-                    else if (isSpecialTile(i, j, 'tripleWord')) {
+                    } else if (i === tw.row && j === tw.col) {
                         cell.classList.add('triple-word');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'bonus-label';
                         bonusLabel.textContent = 'TW';
                         cell.appendChild(bonusLabel);
-                    } 
-                    // Check if this cell is a double letter tile
-                    else if (isSpecialTile(i, j, 'doubleLetter')) {
+                    } else if (i === dl.row && j === dl.col) {
                         cell.classList.add('double-letter');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'letter-bonus-label';
                         bonusLabel.textContent = 'DL';
                         cell.appendChild(bonusLabel);
-                    } 
-                    // Check if this cell is a triple letter tile
-                    else if (isSpecialTile(i, j, 'tripleLetter')) {
+                    } else if (i === tl.row && j === tl.col) {
                         cell.classList.add('triple-letter');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'letter-bonus-label';
@@ -471,13 +547,6 @@
                     boardElement.appendChild(cell);
                 }
             }
-        }
-        
-        // Check if a cell is a specific type of special tile
-        function isSpecialTile(row, col, tileType) {
-            return state.specialTiles[tileType].some(tile => 
-                tile.row === row && tile.col === col
-            );
         }
         
         // Toggle cell selection
@@ -705,14 +774,18 @@
             let baseScore = 0;
             let wordMultiplier = 1;
             
+            // Get references to special tiles
+            const dl = state.specialTiles.doubleLetter;
+            const tl = state.specialTiles.tripleLetter;
+            
             // Calculate base score from letter values with letter multipliers
             for (const cell of selectedCells) {
                 let letterScore = state.letterScores[cell.row][cell.col];
                 
                 // Apply letter multipliers if applicable
-                if (isSpecialTile(cell.row, cell.col, 'doubleLetter')) {
+                if (cell.row === dl.row && cell.col === dl.col) {
                     letterScore *= 2;
-                } else if (isSpecialTile(cell.row, cell.col, 'tripleLetter')) {
+                } else if (cell.row === tl.row && cell.col === tl.col) {
                     letterScore *= 3;
                 }
                 
@@ -720,21 +793,78 @@
             }
             
             // Apply word multipliers if special tiles are used
-            for (const cell of selectedCells) {
-                if (isSpecialTile(cell.row, cell.col, 'doubleWord')) {
-                    wordMultiplier *= 2;
-                } else if (isSpecialTile(cell.row, cell.col, 'tripleWord')) {
-                    wordMultiplier *= 3;
-                }
+            if (hasSpecialTile(selectedCells, 'doubleWord')) {
+                wordMultiplier *= 2;
+            }
+            
+            if (hasSpecialTile(selectedCells, 'tripleWord')) {
+                wordMultiplier *= 3;
             }
             
             return baseScore * wordMultiplier;
+        }
+        
+        // Check if selected cells contain a special tile
+        function hasSpecialTile(selectedCells, tileType) {
+            const specialTile = state.specialTiles[tileType];
+            
+            return selectedCells.some(cell => 
+                cell.row === specialTile.row && cell.col === specialTile.col
+            );
         }
         
         // Calculate total score from all found words
         function calculateTotalScore() {
             // Simply sum up the scores in the wordScores object
             return Object.values(state.wordScores).reduce((sum, score) => sum + score, 0);
+        }
+        
+        // Find a valid path for a word on the board
+        function findWordPath(word, startRow, startCol) {
+            const visited = Array(5).fill().map(() => Array(5).fill(false));
+            const path = [];
+            
+            function dfs(row, col, index) {
+                // Base case: we found the entire word
+                if (index === word.length) {
+                    return true;
+                }
+                
+                // Out of bounds or already visited
+                if (row < 0 || row >= 5 || col < 0 || col >= 5 || visited[row][col]) {
+                    return false;
+                }
+                
+                // Current letter doesn't match
+                const currentLetter = state.board[row][col];
+                const targetSegment = word.substring(index, index + currentLetter.length);
+                if (targetSegment !== currentLetter) {
+                    return false;
+                }
+                
+                // Mark as visited and add to path
+                visited[row][col] = true;
+                path.push({ row, col });
+                
+                // Try all 8 adjacent cells
+                const nextIndex = index + currentLetter.length;
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        if (dfs(row + dr, col + dc, nextIndex)) {
+                            return true;
+                        }
+                    }
+                }
+                
+                // Backtrack
+                path.pop();
+                visited[row][col] = false;
+                return false;
+            }
+            
+            dfs(startRow, startCol, 0);
+            return path;
         }
         
         // Clear current selection

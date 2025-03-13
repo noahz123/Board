@@ -1,3 +1,4 @@
-If you find a higher scoring version of a word you already found it should overwrite the lower scoring version.
-Make sure the triple and double word tiles have at least one vowel in an adjacent square (diagonally counts as adjacent).
-Don't use pop-ups for the invalid word dialogue. Just show and error on the page itself for a couple of seconds.
+Fastest to X score instead of timer?
+Change how letters are randomized so there are more words.
+Change selection color because its hard to see on the DL and TL tiles.
+Make placement of bonus tiles static

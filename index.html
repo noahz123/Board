@@ -194,17 +194,18 @@
             width: 80%;
         }
         
-        /* Special styling for 'Qu' */
+        /* Fixed styling for 'Qu' */
         .qu {
+            display: flex;
+            align-items: center;
+            justify-content: center;
             position: relative;
         }
         
-        .qu::after {
-            content: 'u';
-            position: absolute;
-            font-size: 12px;
-            bottom: 5px;
-            right: 15px;
+        .qu-text {
+            display: inline-block;
+            font-size: 24px;
+            line-height: 1;
         }
     </style>
 </head>
@@ -427,8 +428,12 @@
                     const letter = state.board[i][j];
                     
                     if (letter === 'Qu') {
-                        cell.textContent = 'Q';
                         cell.classList.add('qu');
+                        // Create a span to hold the Qu text
+                        const quSpan = document.createElement('span');
+                        quSpan.className = 'qu-text';
+                        quSpan.textContent = 'Qu';
+                        cell.appendChild(quSpan);
                     } else {
                         cell.textContent = letter;
                     }

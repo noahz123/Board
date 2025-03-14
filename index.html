@@ -328,21 +328,93 @@
                 max-height: 30vh; /* Increased from 20vh to 30vh */
             }
         }
+
+        /* Instructions styling */
+        #instructions {
+            margin: 10px auto;
+            text-align: left;
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #444;
+            max-width: min(90vw, 400px);
+        }
+        
+        #instructions h3 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        #instructions ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        #instructions li {
+            margin: 6px 0;
+            font-size: clamp(12px, 3vw, 14px);
+            line-height: 1.4;
+        }
+        
+        .bonus-tag {
+            display: inline-block;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin: 0 2px;
+        }
+        
+        .dl-tag {
+            background-color: #304a70;
+            color: #6fb0ff;
+        }
+        
+        .tl-tag {
+            background-color: #1c3dac;
+            color: #6fb0ff;
+        }
+        
+        .dw-tag {
+            background-color: #8c3f50;
+            color: #ff8fae;
+        }
+        
+        .tw-tag {
+            background-color: #a33030;
+            color: #ff8fae;
+        }
     </style>
 </head>
 <body>    
     <div id="game-container">
         <div id="game-top">
             <div id="time-remaining">Time: 3:00</div>
-            <div id="board" spellcheck="false"></div>
-            <div id="current-word"></div>
-            <div id="word-score"></div>
-            <div id="notification"></div>
+            
+            <div id="instructions" class="game-section">
+                <h3>How to Play:</h3>
+                <ul>
+                    <li>Connect letters horizontally, vertically, or diagonally</li>
+                    <li>Words must be at least 3 letters long</li>
+                    <li>Letters can only be used once in a word</li>
+                    <li>Points are based on letter scores and bonus tiles:</li>
+                    <li><span class="bonus-tag dl-tag">DL</span> Double Letter | <span class="bonus-tag tl-tag">TL</span> Triple Letter</li>
+                    <li><span class="bonus-tag dw-tag">DW</span> Double Word | <span class="bonus-tag tw-tag">TW</span> Triple Word</li>
+                    <li>3 minute timer</li>
+                </ul>
+            </div>
+            
             <div id="controls">
                 <button id="start-btn">Start Game</button>
                 <button id="submit-btn" disabled>Submit Word</button>
                 <button id="clear-btn" disabled>Clear</button>
             </div>
+            
+            <div id="board" spellcheck="false"></div>
+            <div id="current-word"></div>
+            <div id="word-score"></div>
+            <div id="notification"></div>
         </div>
         
         <div id="game-info">
@@ -570,9 +642,16 @@
                     cell.dataset.col = j;
                     
                     // Click event for mouse/taps
-                    cell.addEventListener('click', () => {
+                    cell.addEventListener('click', (e) => {
                         if (!state.gameActive) return;
-                        toggleCellSelection(i, j);
+                        // Skip if this was just touched or had a mousedown
+                        if (cell.dataset.recentTouch === 'true' || cell.dataset.recentMousedown === 'true') return;
+                        
+                        // Only handle click events if we're not in the middle of a touch interaction
+                        if (!touchActive) {
+                            toggleCellSelection(i, j);
+                        }
+                        e.preventDefault(); // Prevent any default behavior
                     });
                     
                     // Touch events for swipe selection
@@ -582,32 +661,14 @@
                         lastTouchedCell = {row: i, col: j};
                         toggleCellSelection(i, j);
                         e.preventDefault(); // Prevent default to avoid click event firing too
-                    });
+                        
+                        // Set a flag to prevent the click event from processing
+                        cell.dataset.recentTouch = 'true';
+                        setTimeout(() => {
+                            cell.dataset.recentTouch = 'false';
+                        }, 300); // Clear after 300ms
+                    }, { passive: false });
                     
-                    cell.addEventListener('touchmove', (e) => {
-                        if (!state.gameActive || !touchActive) return;
-                        
-                        // Get touch position
-                        const touch = e.touches[0];
-                        const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-                        
-                        // Find if we're over a cell
-                        const touchedCell = elements.find(el => el.classList.contains('cell'));
-                        
-                        if (touchedCell) {
-                            const row = parseInt(touchedCell.dataset.row);
-                            const col = parseInt(touchedCell.dataset.col);
-                            
-                            // Only process if this is a different cell than the last one we touched
-                            if (lastTouchedCell.row !== row || lastTouchedCell.col !== col) {
-                                lastTouchedCell = {row, col};
-                                toggleCellSelection(row, col);
-                            }
-                        }
-                         
-                        e.preventDefault(); // Prevent scrolling
-                    });
-                       
                     boardElement.appendChild(cell);
                 }
             }
@@ -717,6 +778,9 @@
         
         // Start the game
         function startGame() {
+            // Hide instructions
+            document.getElementById('instructions').style.display = 'none';
+            
             // Reset game state
             state.selectedCells = [];
             state.foundWords = [];
@@ -989,8 +1053,19 @@
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
                 
-                // Clear previous selection and start a new one
-                clearSelection();
+                // Mark this cell to prevent the click handler from processing it
+                cell.dataset.recentMousedown = 'true';
+                setTimeout(() => {
+                    cell.dataset.recentMousedown = 'false';
+                }, 300);
+                
+                // Only clear selection if this is not adjacent to the last selected cell
+                // or if there's no selection yet
+                if (state.selectedCells.length === 0 || 
+                    !isAdjacentToLastSelected(row, col)) {
+                    clearSelection();
+                }
+                
                 toggleCellSelection(row, col);
             }
         });

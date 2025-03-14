@@ -683,6 +683,96 @@
                 touchActive = false;
                 lastTouchedCell = null;
             });
+
+            // Update touchend event listener with better drag detection
+            let touchMoved = false;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            const TOUCH_MOVEMENT_THRESHOLD = 10; // Pixels required to consider it a drag
+            
+            boardElement.addEventListener('touchstart', (e) => {
+                touchMoved = false;
+                if (e.touches && e.touches[0]) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                }
+            }, { passive: true });
+            
+            boardElement.addEventListener('touchmove', (e) => {
+                if (e.touches && e.touches[0]) {
+                    const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+                    const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+                    
+                    // Only consider it a move if it exceeds our threshold
+                    if (deltaX > TOUCH_MOVEMENT_THRESHOLD || deltaY > TOUCH_MOVEMENT_THRESHOLD) {
+                        touchMoved = true;
+                    }
+                }
+            }, { passive: false });
+            
+            boardElement.addEventListener('touchend', () => {
+                // Only auto-submit if the user was dragging (touchMoved) and has enough letters
+                if (state.gameActive && touchMoved && state.selectedCells.length >= 3) {
+                    submitWord();
+                }
+                touchActive = false;
+                lastTouchedCell = null;
+            });
+
+            // Add touchmove event listener to the board
+            boardElement.addEventListener('touchmove', (e) => {
+                if (!state.gameActive || !touchActive) return;
+                const touch = e.touches[0];
+                
+                // Get all cell elements
+                const cells = document.querySelectorAll('.cell');
+                let closestCell = null;
+                let minDistance = Infinity;
+                
+                // Get average cell size to create a dynamic threshold
+                const sampleCell = cells[0];
+                const cellRect = sampleCell.getBoundingClientRect();
+                const cellSize = (cellRect.width + cellRect.height) / 2;
+                
+                // Set threshold to be ~40% of cell size (more precise touch required)
+                const MAX_DISTANCE_THRESHOLD = cellSize * 0.4;
+                
+                // Find the cell whose center is closest to the touch point
+                cells.forEach(cell => {
+                    const rect = cell.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    
+                    // Calculate distance from touch to cell center
+                    const distance = Math.sqrt(
+                        Math.pow(touch.clientX - centerX, 2) + 
+                        Math.pow(touch.clientY - centerY, 2)
+                    );
+                    
+                    // Update closest cell if this one is closer
+                    if (distance < minDistance && distance < MAX_DISTANCE_THRESHOLD) {
+                        minDistance = distance;
+                        closestCell = cell;
+                    }
+                });
+                
+                // If we found a close enough cell
+                if (closestCell) {
+                    const row = parseInt(closestCell.dataset.row);
+                    const col = parseInt(closestCell.dataset.col);
+                    
+                    // Make sure we're not on the same cell as last time
+                    if (lastTouchedCell && (lastTouchedCell.row !== row || lastTouchedCell.col !== col)) {
+                        // Check if adjacent to last selected cell before selecting
+                        if (isAdjacentToLastSelected(row, col)) {
+                            lastTouchedCell = {row, col};
+                            toggleCellSelection(row, col);
+                        }
+                    }
+                }
+                
+                e.preventDefault(); // Prevent scrolling while dragging
+            }, { passive: false });
         }
         
         // Check if a cell is a specific type of special tile
@@ -1097,6 +1187,9 @@
 
         // Mouse up to end selection
         document.addEventListener('mouseup', () => {
+            if (state.gameActive && isDragging && state.selectedCells.length >= 3) {
+                submitWord();
+            }
             isDragging = false;
         });
 

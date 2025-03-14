@@ -15,7 +15,9 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            max-height: 100vh; /* Prevent overflow */
             box-sizing: border-box;
+            overflow: hidden; /* Prevent body scrolling */
         }
         
         h1, h3 {
@@ -30,6 +32,8 @@
             max-width: 600px;
             margin: 0 auto;
             flex: 1;
+            height: 100vh; /* Use viewport height */
+            overflow: hidden; /* Prevent scrolling within container */
         }
         
         #game-top {
@@ -51,7 +55,7 @@
             background-color: #2a2a2a; /* Darker grey for cells */
             border: 2px solid #444; /* Darker border */
             border-radius: min(2vw, 8px);
-            font-size: clamp(12px, 4vw, 20px);
+            font-size: clamp(18px, 6vw, 28px); /* Increased from 12px, 4vw, 20px */
             font-weight: bold;
             aspect-ratio: 1/1;
             display: flex;
@@ -77,9 +81,9 @@
         
         .cell .letter-score {
             position: absolute;
-            bottom: 3px;
-            right: 6px;
-            font-size: clamp(8px, 2vw, 12px);
+            bottom: 2px;
+            right: 5px;
+            font-size: clamp(10px, 2.5vw, 16px); /* Increased from 8px, 2vw, 12px */
             font-weight: normal;
             color: #bbbbbb;
         }
@@ -118,18 +122,18 @@
         
         .bonus-label {
             position: absolute;
-            top: 3px;
+            top: 2px;
             left: 3px;
-            font-size: clamp(7px, 1.5vw, 9px);
+            font-size: clamp(9px, 2vw, 12px); /* Increased from 7px, 1.5vw, 9px */
             font-weight: bold;
             color: #ff8fae;
         }
         
         .letter-bonus-label {
             position: absolute;
-            top: 3px;
+            top: 2px;
             left: 3px;
-            font-size: clamp(7px, 1.5vw, 9px);
+            font-size: clamp(9px, 2vw, 12px); /* Increased from 7px, 1.5vw, 9px */
             font-weight: bold;
             color: #6fb0ff;
         }
@@ -177,9 +181,9 @@
         #game-info {
             display: flex;
             flex-direction: column;
-            flex: 1;
+            flex: 1 1 auto; /* Changed from 0 1 auto to allow growing */
             overflow: hidden;
-            max-height: 40vh;
+            max-height: 40vh; /* Increased from 30vh to 40vh */
         }
         
         #word-list-container {
@@ -187,6 +191,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            max-height: 40vh; /* Increased from 30vh to 40vh */
         }
         
         #word-list {
@@ -199,7 +204,8 @@
             text-align: left;
             width: 100%;
             max-width: min(90vw, 400px);
-            background-color: #1e1e1e; /* Slightly lighter than body */
+            background-color: #1e1e1e;
+            height: 100%; /* Use full height of container */
         }
         
         #current-word {
@@ -249,7 +255,7 @@
         
         .qu-text {
             display: inline-block;
-            font-size: clamp(14px, 4vw, 24px);
+            font-size: clamp(18px, 6vw, 28px); /* Match regular letter size exactly */
             line-height: 1;
         }
         
@@ -299,6 +305,28 @@
         h3 {
             margin: 5px 0;
             font-size: clamp(14px, 3.5vw, 18px);
+        }
+
+        /* Mobile optimization */
+        @media (max-height: 700px) {
+            #game-info {
+                max-height: 35vh; /* Increased from 25vh to 35vh */
+            }
+            
+            h3 {
+                margin: 3px 0;
+                font-size: clamp(12px, 3vw, 16px);
+            }
+            
+            #stats {
+                margin-top: 2px;
+            }
+        }
+        
+        @media (max-height: 600px) {
+            #game-info {
+                max-height: 30vh; /* Increased from 20vh to 30vh */
+            }
         }
     </style>
 </head>
@@ -576,10 +604,10 @@
                                 toggleCellSelection(row, col);
                             }
                         }
-                        
+                         
                         e.preventDefault(); // Prevent scrolling
                     });
-                    
+                       
                     boardElement.appendChild(cell);
                 }
             }
@@ -643,7 +671,7 @@
             const last = state.selectedCells[state.selectedCells.length - 1];
             const rowDiff = Math.abs(row - last.row);
             const colDiff = Math.abs(col - last.col);
-            
+               
             return rowDiff <= 1 && colDiff <= 1 && !(rowDiff === 0 && colDiff === 0);
         }
         
@@ -846,7 +874,7 @@
                 } else if (isSpecialTile(cell.row, cell.col, 'tripleLetter')) {
                     letterScore *= 3;
                 }
-                
+                   
                 baseScore += letterScore;
             }
             
@@ -858,7 +886,7 @@
                     wordMultiplier *= 3;
                 }
             }
-            
+               
             return baseScore * wordMultiplier;
         }
         
@@ -941,7 +969,7 @@
                     line.style.left = `${currentCenter.x}px`;
                     line.style.top = `${currentCenter.y}px`;
                     line.style.transform = `rotate(${angle}deg)`;
-                    
+                       
                     connectionContainer.appendChild(line);
                 }
             }

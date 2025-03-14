@@ -6,37 +6,54 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 600px;
+            max-width: 100%;
             margin: 0 auto;
-            padding: 20px;
+            padding: 10px;
             text-align: center;
             background-color: #121212; /* Dark background */
             color: #e0e0e0; /* Light grey text */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
         
         h1, h3 {
             color: #f0f0f0; /* Slightly lighter grey for headings */
+            margin: 5px 0;
         }
         
         #game-container {
-            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            flex: 1;
+        }
+        
+        #game-top {
+            flex: 0 0 auto;
         }
         
         #board {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            grid-gap: 10px;
-            margin: 20px auto;
-            width: 350px;
+            grid-gap: min(2vw, 8px);
+            margin: 10px auto;
+            width: 100%;
+            max-width: min(90vw, 350px);
+            aspect-ratio: 1/1;
+            position: relative;
         }
         
         .cell {
             background-color: #2a2a2a; /* Darker grey for cells */
             border: 2px solid #444; /* Darker border */
-            border-radius: 8px;
-            font-size: 24px;
+            border-radius: min(2vw, 8px);
+            font-size: clamp(12px, 4vw, 20px);
             font-weight: bold;
-            height: 60px;
+            aspect-ratio: 1/1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -50,6 +67,7 @@
             color: #e0e0e0; /* Light grey text */
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
+            z-index: 10;
         }
         
         .cell.selected {
@@ -61,7 +79,7 @@
             position: absolute;
             bottom: 3px;
             right: 6px;
-            font-size: 12px;
+            font-size: clamp(8px, 2vw, 12px);
             font-weight: normal;
             color: #bbbbbb;
         }
@@ -102,7 +120,7 @@
             position: absolute;
             top: 3px;
             left: 3px;
-            font-size: 9px;
+            font-size: clamp(7px, 1.5vw, 9px);
             font-weight: bold;
             color: #ff8fae;
         }
@@ -111,13 +129,21 @@
             position: absolute;
             top: 3px;
             left: 3px;
-            font-size: 9px;
+            font-size: clamp(7px, 1.5vw, 9px);
             font-weight: bold;
             color: #6fb0ff;
         }
         
+        #game-middle {
+            flex: 0 0 auto;
+        }
+        
         #controls {
-            margin: 20px 0;
+            margin: 10px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: min(1.5vw, 5px);
         }
         
         button {
@@ -126,9 +152,8 @@
             border-radius: 4px;
             color: white;
             cursor: pointer;
-            font-size: 16px;
-            margin: 0 5px;
-            padding: 10px 20px;
+            font-size: clamp(12px, 3vw, 14px);
+            padding: min(2vw, 10px) min(3vw, 15px);
             transition: background-color 0.3s;
         }
         
@@ -143,42 +168,58 @@
         }
         
         #time-remaining {
-            font-size: 20px;
+            font-size: clamp(16px, 4vw, 20px);
             font-weight: bold;
-            margin: 10px 0;
+            margin: 5px 0;
             color: #f0f0f0;
+        }
+        
+        #game-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+            max-height: 40vh;
+        }
+        
+        #word-list-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
         
         #word-list {
             border: 1px solid #444;
             border-radius: 4px;
-            height: 200px;
-            margin: 20px auto;
+            flex: 1;
+            margin: 5px auto;
             overflow-y: auto;
             padding: 10px;
             text-align: left;
-            width: 80%;
+            width: 100%;
+            max-width: min(90vw, 400px);
             background-color: #1e1e1e; /* Slightly lighter than body */
         }
         
         #current-word {
-            font-size: 18px;
-            height: 24px;
-            margin: 10px 0;
+            font-size: clamp(14px, 3.5vw, 18px);
+            height: clamp(16px, 5vw, 24px);
+            margin: 5px 0;
             color: #f0f0f0;
         }
         
         #word-score {
-            font-size: 16px;
-            height: 20px;
-            margin: 5px 0;
+            font-size: clamp(12px, 3vw, 16px);
+            height: clamp(16px, 4vw, 20px);
+            margin: 3px 0;
             color: #6fb0ff; /* Lighter blue */
         }
         
         #notification {
-            font-size: 16px;
-            height: 20px;
-            margin: 5px 0;
+            font-size: clamp(12px, 3vw, 16px);
+            height: clamp(16px, 4vw, 20px);
+            margin: 3px 0;
             color: #ff6b6b; /* Brighter red */
             transition: opacity 0.5s;
             opacity: 0;
@@ -189,22 +230,13 @@
         }
         
         #stats {
-            margin-top: 20px;
+            margin-top: 5px;
+            font-size: clamp(12px, 3vw, 14px);
         }
         
         .word-item {
             margin: 5px 0;
             color: #d0d0d0;
-        }
-        
-        .instructions {
-            background-color: #1e1e1e;
-            border: 1px solid #444;
-            border-radius: 4px;
-            margin: 20px auto;
-            padding: 15px;
-            text-align: left;
-            width: 80%;
         }
         
         /* Fixed styling for 'Qu' */
@@ -217,7 +249,7 @@
         
         .qu-text {
             display: inline-block;
-            font-size: 24px;
+            font-size: clamp(14px, 4vw, 24px);
             line-height: 1;
         }
         
@@ -239,25 +271,60 @@
         #word-list::-webkit-scrollbar-thumb:hover {
             background: #666;
         }
+
+        .cell-connection-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .cell-connection {
+            position: absolute;
+            background-color: rgba(110, 200, 255, 0.6);
+            transform-origin: 0 50%;
+            height: 6px;
+            border-radius: 3px;
+            z-index: 5;
+        }
+
+        /* Margin adjustments to make everything compact */
+        p {
+            margin: 3px 0;
+        }
+        
+        h3 {
+            margin: 5px 0;
+            font-size: clamp(14px, 3.5vw, 18px);
+        }
     </style>
 </head>
 <body>    
     <div id="game-container">
-        <div id="time-remaining">Time: 3:00</div>
-        <div id="board" spellcheck="false"></div>
-        <div id="current-word"></div>
-        <div id="word-score"></div>
-        <div id="notification"></div>
-        <div id="controls">
-            <button id="start-btn">Start Game</button>
-            <button id="submit-btn" disabled>Submit Word</button>
-            <button id="clear-btn" disabled>Clear</button>
+        <div id="game-top">
+            <div id="time-remaining">Time: 3:00</div>
+            <div id="board" spellcheck="false"></div>
+            <div id="current-word"></div>
+            <div id="word-score"></div>
+            <div id="notification"></div>
+            <div id="controls">
+                <button id="start-btn">Start Game</button>
+                <button id="submit-btn" disabled>Submit Word</button>
+                <button id="clear-btn" disabled>Clear</button>
+            </div>
         </div>
-        <h3>Your Words:</h3>
-        <div id="word-list"></div>
-        <div id="stats">
-            <p>Words found: <span id="word-count">0</span></p>
-            <p>Total points: <span id="score">0</span></p>
+        
+        <div id="game-info">
+            <div id="stats">
+                <p>Words found: <span id="word-count">0</span> | Total points: <span id="score">0</span></p>
+            </div>
+            <div id="word-list-container">
+                <h3>Your Words:</h3>
+                <div id="word-list"></div>
+            </div>
         </div>
     </div>
 
@@ -615,6 +682,9 @@
                     cellElement.classList.add('selected');
                 }
             });
+            
+            // Update connection lines between selected cells
+            updateConnectionLines();
         }
         
         // Start the game
@@ -801,7 +871,7 @@
         // Clear current selection
         function clearSelection() {
             state.selectedCells = [];
-            updateBoardSelection();
+            updateBoardSelection(); // This will also clear connection lines
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
         }
@@ -816,6 +886,120 @@
             if (e.key === 'Enter' && state.gameActive) {
                 submitWord();
             }
+        });
+
+        // Create and maintain connection lines between selected cells
+        function updateConnectionLines() {
+            // Remove existing connections
+            const existingContainer = document.querySelector('.cell-connection-container');
+            if (existingContainer) {
+                existingContainer.remove();
+            }
+            
+            if (state.selectedCells.length < 2) return;
+            
+            // Create container for all connections
+            const connectionContainer = document.createElement('div');
+            connectionContainer.className = 'cell-connection-container';
+            boardElement.appendChild(connectionContainer);
+            
+            // Draw line between each consecutive pair of selected cells
+            for (let i = 0; i < state.selectedCells.length - 1; i++) {
+                const current = state.selectedCells[i];
+                const next = state.selectedCells[i + 1];
+                
+                // Get the DOM elements for the cells
+                const currentElement = document.querySelector(`.cell[data-row="${current.row}"][data-col="${current.col}"]`);
+                const nextElement = document.querySelector(`.cell[data-row="${next.row}"][data-col="${next.col}"]`);
+                
+                if (currentElement && nextElement) {
+                    const currentRect = currentElement.getBoundingClientRect();
+                    const nextRect = nextElement.getBoundingClientRect();
+                    const boardRect = boardElement.getBoundingClientRect();
+                    
+                    // Calculate center points relative to the board
+                    const currentCenter = {
+                        x: currentRect.left + currentRect.width / 2 - boardRect.left,
+                        y: currentRect.top + currentRect.height / 2 - boardRect.top
+                    };
+                    
+                    const nextCenter = {
+                        x: nextRect.left + nextRect.width / 2 - boardRect.left,
+                        y: nextRect.top + nextRect.height / 2 - boardRect.top
+                    };
+                    
+                    // Calculate line length and angle
+                    const dx = nextCenter.x - currentCenter.x;
+                    const dy = nextCenter.y - currentCenter.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    
+                    // Create the line element
+                    const line = document.createElement('div');
+                    line.className = 'cell-connection';
+                    line.style.width = `${length}px`;
+                    line.style.left = `${currentCenter.x}px`;
+                    line.style.top = `${currentCenter.y}px`;
+                    line.style.transform = `rotate(${angle}deg)`;
+                    
+                    connectionContainer.appendChild(line);
+                }
+            }
+        }
+
+        // Add mouse drag functionality for desktop users
+        let isDragging = false;
+
+        // Mouse down to start selection
+        boardElement.addEventListener('mousedown', (e) => {
+            if (!state.gameActive) return;
+            isDragging = true;
+            
+            // Find the cell that was clicked
+            const cell = e.target.closest('.cell');
+            if (cell) {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                // Clear previous selection and start a new one
+                clearSelection();
+                toggleCellSelection(row, col);
+            }
+        });
+
+        // Mouse move to continue selection
+        document.addEventListener('mousemove', (e) => {
+            if (!state.gameActive || !isDragging) return;
+            
+            // Find the cell under the cursor
+            const elements = document.elementsFromPoint(e.clientX, e.clientY);
+            const cell = elements.find(el => el.classList.contains('cell'));
+            
+            if (cell) {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                // Check if this is a new cell and it's adjacent to the last selected cell
+                if (isAdjacentToLastSelected(row, col)) {
+                    const isAlreadySelected = state.selectedCells.some(
+                        selected => selected.row === row && selected.col === col
+                    );
+                    
+                    if (!isAlreadySelected) {
+                        toggleCellSelection(row, col);
+                    }
+                }
+            }
+        });
+
+        // Mouse up to end selection
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Handle mouse leaving the window
+        document.addEventListener('mouseleave', () => {
+            isDragging = false;
         });
     </script>
 </body>

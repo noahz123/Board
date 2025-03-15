@@ -171,19 +171,12 @@
             cursor: not-allowed;
         }
         
-        #time-remaining {
-            font-size: clamp(16px, 4vw, 20px);
-            font-weight: bold;
-            margin: 5px 0;
-            color: #f0f0f0;
-        }
-        
         #game-info {
-            display: flex;
+            display: none; /* Hide initially */
             flex-direction: column;
-            flex: 1 1 auto; /* Changed from 0 1 auto to allow growing */
+            flex: 1 1 auto;
             overflow: hidden;
-            max-height: 40vh; /* Increased from 30vh to 40vh */
+            max-height: 40vh;
         }
         
         #word-list-container {
@@ -236,8 +229,11 @@
         }
         
         #stats {
-            margin-top: 5px;
+            margin: 5px 0;
             font-size: clamp(12px, 3vw, 14px);
+            /* Add these lines to ensure proper display */
+            text-align: center;
+            width: 100%;
         }
         
         .word-item {
@@ -343,6 +339,7 @@
         #instructions h3 {
             text-align: center;
             margin-bottom: 10px;
+            font-size: clamp(16px, 4vw, 20px); /* Increased from default h3 size */
         }
         
         #instructions ul {
@@ -352,9 +349,9 @@
         }
         
         #instructions li {
-            margin: 6px 0;
-            font-size: clamp(12px, 3vw, 14px);
-            line-height: 1.4;
+            margin: 8px 0;
+            font-size: clamp(18px, 3.5vw, 20px); /* Increased from 12px, 3vw, 14px */
+            line-height: 1.5;
         }
         
         .bonus-tag {
@@ -385,30 +382,46 @@
             background-color: #a33030;
             color: #ff8fae;
         }
+
+        .cell.selected.valid-flash {
+            background-color: #4CAF50; /* Green flash */
+            border-color: #45a049;
+            transition: background-color 0.05s, border-color 0.05s;
+        }
+        
+        .cell.selected.invalid-flash {
+            background-color: #f44336; /* Red flash */
+            border-color: #da190b;
+            transition: background-color 0.05s, border-color 0.05s;
+        }
     </style>
 </head>
 <body>    
     <div id="game-container">
         <div id="game-top">
-            <div id="time-remaining">Time: 3:00</div>
             
+            <!-- Update the instructions -->
             <div id="instructions" class="game-section">
                 <h3>How to Play:</h3>
                 <ul>
-                    <li>Connect letters horizontally, vertically, or diagonally</li>
-                    <li>Words must be at least 3 letters long</li>
-                    <li>Letters can only be used once in a word</li>
+                    <li>Connect adjacent letters horizontally, vertically, or diagonally.</li>
+                    <li>Words must be at least 2 letters long.</li>
+                    <li>Letters can only be used once in a word.</li>
                     <li>Points are based on letter scores and bonus tiles:</li>
                     <li><span class="bonus-tag dl-tag">DL</span> Double Letter | <span class="bonus-tag tl-tag">TL</span> Triple Letter</li>
                     <li><span class="bonus-tag dw-tag">DW</span> Double Word | <span class="bonus-tag tw-tag">TW</span> Triple Word</li>
-                    <li>3 minute timer</li>
+                    <li style="margin-top: 50px;">Reach 150 points as fast as you can!</li>
+                    <li style="margin-top: 50px;">v0.2</li>
                 </ul>
             </div>
             
             <div id="controls">
                 <button id="start-btn">Start Game</button>
-                <button id="submit-btn" disabled>Submit Word</button>
-                <button id="clear-btn" disabled>Clear</button>
+            </div>
+            
+            <!-- Moved stats section here, above the board -->
+            <div id="stats" style="display: none;">
+                <p><span id="score" style="font-size: clamp(24px, 6vw, 36px); font-weight: bold;">0</span></p>
             </div>
             
             <div id="board" spellcheck="false"></div>
@@ -418,11 +431,8 @@
         </div>
         
         <div id="game-info">
-            <div id="stats">
-                <p>Words found: <span id="word-count">0</span> | Total points: <span id="score">0</span></p>
-            </div>
+            <!-- Stats div was moved above the board -->
             <div id="word-list-container">
-                <h3>Your Words:</h3>
                 <div id="word-list"></div>
             </div>
         </div>
@@ -459,9 +469,10 @@
             selectedCells: [],
             foundWords: [],
             wordScores: {}, // Store word scores for checking higher scoring versions
-            timeRemaining: 180,
             gameActive: false,
-            timer: null
+            targetScore: 150,
+            startTime: null,     // Add this line to track when game starts
+            endTime: null       // Add this line to track when game ends
         };
         
         // DOM elements
@@ -469,12 +480,9 @@
         const currentWordElement = document.getElementById('current-word');
         const wordScoreElement = document.getElementById('word-score');
         const wordListElement = document.getElementById('word-list');
-        const timeRemainingElement = document.getElementById('time-remaining');
         const wordCountElement = document.getElementById('word-count');
         const scoreElement = document.getElementById('score');
         const startButton = document.getElementById('start-btn');
-        const submitButton = document.getElementById('submit-btn');
-        const clearButton = document.getElementById('clear-btn');
         const notificationElement = document.getElementById('notification');
         
         // Touch control variables
@@ -584,16 +592,15 @@
                 for (let j = 0; j < 5; j++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    cell.setAttribute('spellcheck', 'false');  // Add this line
+                    cell.setAttribute('spellcheck', 'false');
                     const letter = state.board[i][j];
                     
                     if (letter === 'Qu') {
                         cell.classList.add('qu');
-                        // Create a span to hold the Qu text
                         const quSpan = document.createElement('span');
                         quSpan.className = 'qu-text';
                         quSpan.textContent = 'Qu';
-                        quSpan.setAttribute('spellcheck', 'false');  // Also disable for the span
+                        quSpan.setAttribute('spellcheck', 'false');
                         cell.appendChild(quSpan);
                     } else {
                         cell.textContent = letter;
@@ -605,32 +612,26 @@
                     scoreSpan.textContent = state.letterScores[i][j];
                     cell.appendChild(scoreSpan);
                     
-                    // Check if this cell is a double word tile
+                    // Add bonus tile labels
                     if (isSpecialTile(i, j, 'doubleWord')) {
                         cell.classList.add('double-word');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'bonus-label';
                         bonusLabel.textContent = 'DW';
                         cell.appendChild(bonusLabel);
-                    } 
-                    // Check if this cell is a triple word tile
-                    else if (isSpecialTile(i, j, 'tripleWord')) {
+                    } else if (isSpecialTile(i, j, 'tripleWord')) {
                         cell.classList.add('triple-word');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'bonus-label';
                         bonusLabel.textContent = 'TW';
                         cell.appendChild(bonusLabel);
-                    } 
-                    // Check if this cell is a double letter tile
-                    else if (isSpecialTile(i, j, 'doubleLetter')) {
+                    } else if (isSpecialTile(i, j, 'doubleLetter')) {
                         cell.classList.add('double-letter');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'letter-bonus-label';
                         bonusLabel.textContent = 'DL';
                         cell.appendChild(bonusLabel);
-                    } 
-                    // Check if this cell is a triple letter tile
-                    else if (isSpecialTile(i, j, 'tripleLetter')) {
+                    } else if (isSpecialTile(i, j, 'tripleLetter')) {
                         cell.classList.add('triple-letter');
                         const bonusLabel = document.createElement('span');
                         bonusLabel.className = 'letter-bonus-label';
@@ -641,141 +642,38 @@
                     cell.dataset.row = i;
                     cell.dataset.col = j;
                     
-                    // Click event for mouse/taps
-                    cell.addEventListener('click', (e) => {
-                        if (!state.gameActive) return;
-                        // Skip if this was just touched or had a mousedown
-                        if (cell.dataset.recentTouch === 'true' || cell.dataset.recentMousedown === 'true') return;
-                        
-                        // Only handle click events if we're not in the middle of a touch interaction
-                        if (!touchActive) {
-                            toggleCellSelection(i, j);
-                        }
-                        e.preventDefault(); // Prevent any default behavior
-                    });
-                    
-                    // Touch events for swipe selection
-                    cell.addEventListener('touchstart', (e) => {
-                        if (!state.gameActive) return;
-                        touchActive = true;
-                        lastTouchedCell = {row: i, col: j};
-                        toggleCellSelection(i, j);
-                        e.preventDefault(); // Prevent default to avoid click event firing too
-                        
-                        // Set a flag to prevent the click event from processing
-                        cell.dataset.recentTouch = 'true';
-                        setTimeout(() => {
-                            cell.dataset.recentTouch = 'false';
-                        }, 300); // Clear after 300ms
-                    }, { passive: false });
-                    
                     boardElement.appendChild(cell);
                 }
             }
-            
-            // Add touch end event listener to the board
-            boardElement.addEventListener('touchend', () => {
-                touchActive = false;
-                lastTouchedCell = null;
-            });
-            
-            boardElement.addEventListener('touchcancel', () => {
-                touchActive = false;
-                lastTouchedCell = null;
-            });
-
-            // Update touchend event listener with better drag detection
-            let touchMoved = false;
-            let touchStartX = 0;
-            let touchStartY = 0;
-            const TOUCH_MOVEMENT_THRESHOLD = 10; // Pixels required to consider it a drag
-            
-            boardElement.addEventListener('touchstart', (e) => {
-                touchMoved = false;
-                if (e.touches && e.touches[0]) {
-                    touchStartX = e.touches[0].clientX;
-                    touchStartY = e.touches[0].clientY;
-                }
-            }, { passive: true });
-            
-            boardElement.addEventListener('touchmove', (e) => {
-                if (e.touches && e.touches[0]) {
-                    const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-                    const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-                    
-                    // Only consider it a move if it exceeds our threshold
-                    if (deltaX > TOUCH_MOVEMENT_THRESHOLD || deltaY > TOUCH_MOVEMENT_THRESHOLD) {
-                        touchMoved = true;
-                    }
-                }
-            }, { passive: false });
-            
-            boardElement.addEventListener('touchend', () => {
-                // Only auto-submit if the user was dragging (touchMoved) and has enough letters
-                if (state.gameActive && touchMoved && state.selectedCells.length >= 3) {
-                    submitWord();
-                }
-                touchActive = false;
-                lastTouchedCell = null;
-            });
-
-            // Add touchmove event listener to the board
-            boardElement.addEventListener('touchmove', (e) => {
-                if (!state.gameActive || !touchActive) return;
-                const touch = e.touches[0];
-                
-                // Get all cell elements
-                const cells = document.querySelectorAll('.cell');
-                let closestCell = null;
-                let minDistance = Infinity;
-                
-                // Get average cell size to create a dynamic threshold
-                const sampleCell = cells[0];
-                const cellRect = sampleCell.getBoundingClientRect();
-                const cellSize = (cellRect.width + cellRect.height) / 2;
-                
-                // Set threshold to be ~40% of cell size (more precise touch required)
-                const MAX_DISTANCE_THRESHOLD = cellSize * 0.4;
-                
-                // Find the cell whose center is closest to the touch point
-                cells.forEach(cell => {
-                    const rect = cell.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    
-                    // Calculate distance from touch to cell center
-                    const distance = Math.sqrt(
-                        Math.pow(touch.clientX - centerX, 2) + 
-                        Math.pow(touch.clientY - centerY, 2)
-                    );
-                    
-                    // Update closest cell if this one is closer
-                    if (distance < minDistance && distance < MAX_DISTANCE_THRESHOLD) {
-                        minDistance = distance;
-                        closestCell = cell;
-                    }
-                });
-                
-                // If we found a close enough cell
-                if (closestCell) {
-                    const row = parseInt(closestCell.dataset.row);
-                    const col = parseInt(closestCell.dataset.col);
-                    
-                    // Make sure we're not on the same cell as last time
-                    if (lastTouchedCell && (lastTouchedCell.row !== row || lastTouchedCell.col !== col)) {
-                        // Check if adjacent to last selected cell before selecting
-                        if (isAdjacentToLastSelected(row, col)) {
-                            lastTouchedCell = {row, col};
-                            toggleCellSelection(row, col);
-                        }
-                    }
-                }
-                
-                e.preventDefault(); // Prevent scrolling while dragging
-            }, { passive: false });
         }
-        
-        // Check if a cell is a specific type of special tile
+
+        // Add this function to handle cell clicks
+        function handleCellClick(e) {
+            if (!state.gameActive) return;
+            
+            const cell = e.target.closest('.cell');
+            if (!cell) return;
+            
+            // Skip if this was just touched or had a mousedown
+            if (cell.dataset.recentTouch === 'true' || cell.dataset.recentMousedown === 'true') return;
+            
+            // Only handle click events if we're not in the middle of a touch interaction
+            if (!touchActive) {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                toggleCellSelection(row, col);
+                
+                // Check if only one cell is selected after the click and clear if so
+                setTimeout(() => {
+                    if (state.selectedCells.length === 1) {
+                        clearSelection();
+                    }
+                }, 100);
+            }
+            e.preventDefault();
+        }
+
+        // Rest of the functions should be outside renderBoard
         function isSpecialTile(row, col, tileType) {
             return state.specialTiles[tileType].some(tile => 
                 tile.row === row && tile.col === col
@@ -844,7 +742,7 @@
             }
             
             const score = calculateWordScore(state.selectedCells);
-            wordScoreElement.textContent = `Value: ${score} points`;
+            wordScoreElement.textContent = `${score} points`;
         }
         
         // Update board selection visual
@@ -871,18 +769,30 @@
             // Hide instructions
             document.getElementById('instructions').style.display = 'none';
             
+            // Show game info
+            document.getElementById('game-info').style.display = 'flex';
+            
+            // Show stats
+            document.getElementById('stats').style.display = 'block';
+            
+            // Hide start button instead of disabling it
+            startButton.style.display = 'none';
+            
             // Reset game state
             state.selectedCells = [];
             state.foundWords = [];
             state.wordScores = {};
-            state.timeRemaining = 180;
             state.gameActive = true;
+            state.startTime = new Date();
+            state.endTime = null;
             
             // Update UI
             wordListElement.innerHTML = '';
-            wordCountElement.textContent = '0';
+            // Check if wordCountElement exists before using it
+            if (wordCountElement) {
+                wordCountElement.textContent = '0';
+            }
             scoreElement.textContent = '0';
-            timeRemainingElement.textContent = 'Time: 3:00';
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
             notificationElement.textContent = '';
@@ -890,51 +800,43 @@
             
             // Initialize board
             initializeBoard();
-            
-            // Update button states
-            startButton.disabled = true;
-            submitButton.disabled = false;
-            clearButton.disabled = false;
-            
-            // Start timer
-            state.timer = setInterval(updateTimer, 1000);
-        }
-        
-        // Update the timer
-        function updateTimer() {
-            state.timeRemaining--;
-            
-            const minutes = Math.floor(state.timeRemaining / 60);
-            const seconds = state.timeRemaining % 60;
-            timeRemainingElement.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            
-            if (state.timeRemaining <= 0) {
-                endGame();
-            }
         }
         
         // End the game
-        function endGame() {
+        function endGame(playerWon = false) {
             state.gameActive = false;
-            clearInterval(state.timer);
+            state.endTime = new Date();    // Add this line
             
-            // Update button states
-            startButton.disabled = false;
-            submitButton.disabled = true;
-            clearButton.disabled = true;
+            // Show start button again
+            startButton.style.display = 'block';
             
             // Clear selection
             state.selectedCells = [];
             updateBoardSelection();
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
-            timeRemainingElement.textContent = 'Time\'s up!';
+            
+            if (playerWon) {
+                // Calculate time taken
+                const timeTaken = (state.endTime - state.startTime) / 1000; // Convert to seconds
+                const minutes = Math.floor(timeTaken / 60);
+                const seconds = Math.floor(timeTaken % 60);
+                
+                // Format time string
+                const timeString = minutes > 0 
+                    ? `${minutes}m ${seconds}s`
+                    : `${seconds} seconds`;
+                    
+                // Show victory message with time
+                showNotification(`Victory! Time taken: ${timeString}`, 50000);
+            }
         }
         
-        // Submit the current word
+        // Modify the submitWord function to accept 2-letter words
         function submitWord() {
-            if (state.selectedCells.length < 3) {
-                showNotification('Words must be at least 3 letters long.');
+            if (state.selectedCells.length < 2) {
+                showNotification('Words must be at least 2 letters long.');
+                flashInvalidWord();
                 return;
             }
             
@@ -952,51 +854,65 @@
             // Check if the word is valid
             if (!isValidWord(lookupWord)) {
                 showNotification('Not a valid word!');
+                flashInvalidWord();
                 return;
             }
             
-            // Check if we already found this word
-            const wordIndex = state.foundWords.indexOf(word);
-            if (wordIndex !== -1) {
+            // Check if we already found this word (case-insensitive comparison)
+            const existingWordIndex = state.foundWords.findIndex(
+                foundWord => foundWord.toLowerCase() === word.toLowerCase()
+            );
+            
+            if (existingWordIndex !== -1) {
                 // Check if this is a higher scoring version
-                if (score > state.wordScores[word]) {
-                    // Remove the old word from display
-                    const wordElements = wordListElement.querySelectorAll('.word-item');
-                    wordElements[wordIndex].remove();
-                    
-                    // Update with new score
-                    state.wordScores[word] = score;
-                    
-                    // Add the updated word to display
-                    addWordToDisplay(word, score);
-                    
-                    // Update total score
-                    scoreElement.textContent = calculateTotalScore();
-                    
-                    showNotification('Found a higher scoring version!');
+                if (score > state.wordScores[state.foundWords[existingWordIndex]]) {
+                    flashValidWord(() => {
+                        // Remove the old word and its score
+                        const oldWord = state.foundWords[existingWordIndex];
+                        state.foundWords.splice(existingWordIndex, 1);
+                        delete state.wordScores[oldWord];
+                        
+                        // Update the display
+                        const wordElements = wordListElement.querySelectorAll('.word-item');
+                        wordElements[existingWordIndex].remove();
+                        
+                        // Add the new version
+                        state.foundWords.push(word);
+                        state.wordScores[word] = score;
+                        addWordToDisplay(word, score);
+                        
+                        // Update total score
+                        scoreElement.textContent = calculateTotalScore();
+                        
+                        showNotification('Found a higher scoring version!');
+                    });
                 } else {
                     showNotification('You already found this word!');
+                    flashInvalidWord();
                 }
             } else {
-                // Add the word to found words
-                state.foundWords.push(word);
-                state.wordScores[word] = score;
-                
-                // Add the word to the display
-                addWordToDisplay(word, score);
-                
-                // Update stats
-                wordCountElement.textContent = state.foundWords.length;
-                scoreElement.textContent = calculateTotalScore();
+                // Add new word
+                flashValidWord(() => {
+                    state.foundWords.push(word);
+                    state.wordScores[word] = score;
+                    
+                    // Add the word to the display
+                    addWordToDisplay(word, score);
+                    
+                    // Update stats - ADD THIS CHECK:
+                    if (wordCountElement) {
+                        wordCountElement.textContent = state.foundWords.length;
+                    }
+                    scoreElement.textContent = calculateTotalScore();
+                    
+                    // Check if player has reached the target score
+                    if (parseInt(scoreElement.textContent) >= state.targetScore) {
+                        endGame(true);
+                    }
+                });
             }
-            
-            // Clear selection
-            state.selectedCells = [];
-            updateBoardSelection();
-            currentWordElement.textContent = '';
-            wordScoreElement.textContent = '';
         }
-        
+
         // Add a word to the display
         function addWordToDisplay(word, score) {
             // Add the word to the display
@@ -1060,8 +976,6 @@
         
         // Event listeners
         startButton.addEventListener('click', startGame);
-        submitButton.addEventListener('click', submitWord);
-        clearButton.addEventListener('click', clearSelection);
         
         // Allow Enter key to submit word
         document.addEventListener('keydown', (e) => {
@@ -1185,10 +1099,16 @@
             }
         });
 
-        // Mouse up to end selection
         document.addEventListener('mouseup', () => {
-            if (state.gameActive && isDragging && state.selectedCells.length >= 3) {
-                submitWord();
+            if (state.gameActive && isDragging) {
+                if (state.selectedCells.length >= 2) {
+                    setTimeout(() => {
+                        submitWord();
+                    }, 50);
+                } else {
+                    // Clear selection if only one cell is selected
+                    cleanupSingleTileSelection();
+                }
             }
             isDragging = false;
         });
@@ -1196,6 +1116,160 @@
         // Handle mouse leaving the window
         document.addEventListener('mouseleave', () => {
             isDragging = false;
+        });
+
+        // Add these new helper functions
+        function flashValidWord(callback) {
+            // Add valid flash class to all selected cells
+            state.selectedCells.forEach(cell => {
+                const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                if (cellElement) {
+                    cellElement.classList.add('valid-flash');
+                }
+            });
+            
+            // Wait for animation and then clear
+            setTimeout(() => {
+                state.selectedCells.forEach(cell => {
+                    const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                    if (cellElement) {
+                        cellElement.classList.remove('valid-flash');
+                    }
+                });
+                clearSelection();
+                if (callback) callback();
+            }, 100);
+        }
+
+        function flashInvalidWord() {
+            // Add invalid flash class to all selected cells
+            state.selectedCells.forEach(cell => {
+                const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                if (cellElement) {
+                    cellElement.classList.add('invalid-flash');
+                }
+            });
+            
+            // Wait for animation and then clear
+            setTimeout(() => {
+                state.selectedCells.forEach(cell => {
+                    const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                    if (cellElement) {
+                        cellElement.classList.remove('invalid-flash');
+                    }
+                });
+                clearSelection();
+            }, 100);
+        }
+
+        // Add these event listeners once when the page loads
+        boardElement.addEventListener('touchend', () => {
+            touchActive = false;
+            lastTouchedCell = null;
+        });
+
+        boardElement.addEventListener('touchcancel', () => {
+            touchActive = false;
+            lastTouchedCell = null;
+        });
+
+        // Touch event handling
+        let touchMoved = false;
+        let touchStartTime = 0;
+        const TOUCH_MOVEMENT_THRESHOLD = 5;
+
+        boardElement.addEventListener('touchstart', (e) => {
+            if (!state.gameActive) return;
+            
+            touchActive = true;
+            touchMoved = false;
+            touchStartTime = Date.now();
+            
+            if (e.touches && e.touches[0]) {
+                const touch = e.touches[0];
+                const cell = document.elementFromPoint(touch.clientX, touch.clientY);
+                
+                if (cell && cell.classList.contains('cell')) {
+                    const row = parseInt(cell.dataset.row);
+                    const col = parseInt(cell.dataset.col);
+                    
+                    clearSelection();
+                    lastTouchedCell = { row, col };
+                    toggleCellSelection(row, col);
+                }
+            }
+            
+            e.preventDefault();
+        }, { passive: false });
+
+        boardElement.addEventListener('touchmove', (e) => {
+            if (!state.gameActive || !touchActive) return;
+            
+            if (e.touches && e.touches[0]) {
+                const touch = e.touches[0];
+                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                
+                if (element && element.classList.contains('cell')) {
+                    const row = parseInt(element.dataset.row);
+                    const col = parseInt(element.dataset.col);
+                    
+                    // Only update if we're on a new cell
+                    if (!lastTouchedCell || lastTouchedCell.row !== row || lastTouchedCell.col !== col) {
+                        if (isAdjacentToLastSelected(row, col)) {
+                            touchMoved = true;
+                            lastTouchedCell = { row, col };
+                            toggleCellSelection(row, col);
+                        }
+                    }
+                }
+            }
+            
+            e.preventDefault();
+        }, { passive: false });
+
+        boardElement.addEventListener('touchend', (e) => {
+            const touchDuration = Date.now() - touchStartTime;
+            
+            if (state.gameActive) {
+                if (touchMoved && state.selectedCells.length >= 2) {
+                    submitWord();
+                } else {
+                    // Clear selection if only one cell is selected, regardless of whether touch moved
+                    cleanupSingleTileSelection();
+                }
+            }
+            
+            touchActive = false;
+            lastTouchedCell = null;
+            e.preventDefault();
+        }, { passive: false });
+
+        boardElement.addEventListener('touchcancel', (e) => {
+            touchActive = false;
+            lastTouchedCell = null;
+            e.preventDefault();
+        }, { passive: false });
+
+        // Initialize the game
+        function initGame() {
+            // Add event listeners once - keeping only the ones that don't already exist elsewhere
+            boardElement.addEventListener('click', handleCellClick);
+            
+            // Remove the other event listeners that are already defined inline
+            // No need to redefine mousedown, mousemove, etc. since they already exist
+        }
+
+        // Add this new helper function after clearSelection()
+        function cleanupSingleTileSelection() {
+            if (state.selectedCells.length === 1) {
+                clearSelection();
+            }
+        }
+
+        // Call this on page load
+        window.addEventListener('load', function() {
+            loadDictionary();
+            initGame();
         });
     </script>
 </body>

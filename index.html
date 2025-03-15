@@ -339,7 +339,7 @@
         #instructions h3 {
             text-align: center;
             margin-bottom: 10px;
-            font-size: clamp(16px, 4vw, 20px); /* Increased from default h3 size */
+            font-size: clamp(14px, 4vw, 24px); /* Increased from default h3 size */
         }
         
         #instructions ul {
@@ -350,7 +350,7 @@
         
         #instructions li {
             margin: 8px 0;
-            font-size: clamp(18px, 3.5vw, 20px); /* Increased from 12px, 3vw, 14px */
+            font-size: clamp(10px, 3.5vw, 20px); /* Increased from 12px, 3vw, 14px */
             line-height: 1.5;
         }
         
@@ -394,6 +394,22 @@
             border-color: #da190b;
             transition: background-color 0.05s, border-color 0.05s;
         }
+
+        /* Add timer styling */
+        #timer {
+            font-size: clamp(24px, 6vw, 36px);
+            font-weight: bold;
+            color: #f0f0f0;
+            margin: 5px 0;
+        }
+        
+        #timer.warning {
+            color: #ff9800; /* Orange for warning */
+        }
+        
+        #timer.danger {
+            color: #f44336; /* Red for danger/last seconds */
+        }
     </style>
 </head>
 <body>    
@@ -405,13 +421,13 @@
                 <h3>How to Play:</h3>
                 <ul>
                     <li>Connect adjacent letters horizontally, vertically, or diagonally.</li>
-                    <li>Words must be at least 2 letters long.</li>
+                    <li>Words must be at least 3 letters long.</li>
                     <li>Letters can only be used once in a word.</li>
                     <li>Points are based on letter scores and bonus tiles:</li>
                     <li><span class="bonus-tag dl-tag">DL</span> Double Letter | <span class="bonus-tag tl-tag">TL</span> Triple Letter</li>
                     <li><span class="bonus-tag dw-tag">DW</span> Double Word | <span class="bonus-tag tw-tag">TW</span> Triple Word</li>
-                    <li style="margin-top: 50px;">Reach 150 points as fast as you can!</li>
-                    <li style="margin-top: 50px;">v0.2</li>
+                    <li style="margin-top: 50px;">Score as many points as possible in 3 minutes!</li>
+                    <li style="margin-top: 50px;">v0.3</li>
                 </ul>
             </div>
             
@@ -421,6 +437,7 @@
             
             <!-- Moved stats section here, above the board -->
             <div id="stats" style="display: none;">
+                <div id="timer">3:00</div>
                 <p><span id="score" style="font-size: clamp(24px, 6vw, 36px); font-weight: bold;">0</span></p>
             </div>
             
@@ -470,9 +487,10 @@
             foundWords: [],
             wordScores: {}, // Store word scores for checking higher scoring versions
             gameActive: false,
-            targetScore: 150,
-            startTime: null,     // Add this line to track when game starts
-            endTime: null       // Add this line to track when game ends
+            timeRemaining: 180, // 3 minutes in seconds
+            timerInterval: null,
+            startTime: null,
+            endTime: null
         };
         
         // DOM elements
@@ -484,6 +502,7 @@
         const scoreElement = document.getElementById('score');
         const startButton = document.getElementById('start-btn');
         const notificationElement = document.getElementById('notification');
+        const timerElement = document.getElementById('timer');
         
         // Touch control variables
         let touchActive = false;
@@ -785,6 +804,7 @@
             state.gameActive = true;
             state.startTime = new Date();
             state.endTime = null;
+            state.timeRemaining = 180; // Reset to 3 minutes
             
             // Update UI
             wordListElement.innerHTML = '';
@@ -800,12 +820,21 @@
             
             // Initialize board
             initializeBoard();
+            
+            // Start timer
+            clearInterval(state.timerInterval);
+            updateTimer();
+            state.timerInterval = setInterval(() => {
+                state.timeRemaining--;
+                updateTimer();
+            }, 1000);
         }
         
         // End the game
         function endGame(playerWon = false) {
             state.gameActive = false;
-            state.endTime = new Date();    // Add this line
+            state.endTime = new Date();
+            clearInterval(state.timerInterval);
             
             // Show start button again
             startButton.style.display = 'block';
@@ -816,26 +845,20 @@
             currentWordElement.textContent = '';
             wordScoreElement.textContent = '';
             
-            if (playerWon) {
-                // Calculate time taken
-                const timeTaken = (state.endTime - state.startTime) / 1000; // Convert to seconds
-                const minutes = Math.floor(timeTaken / 60);
-                const seconds = Math.floor(timeTaken % 60);
-                
-                // Format time string
-                const timeString = minutes > 0 
-                    ? `${minutes}m ${seconds}s`
-                    : `${seconds} seconds`;
-                    
-                // Show victory message with time
-                showNotification(`Victory! Time taken: ${timeString}`, 50000);
+            const finalScore = parseInt(scoreElement.textContent) || 0;
+            
+            // Show game over message
+            if (state.timeRemaining <= 0) {
+                showNotification(`Time's up! Final Score: ${finalScore} points`, 50000);
+            } else if (playerWon) {
+                showNotification(`Game ended! Final Score: ${finalScore} points`, 50000);
             }
         }
         
-        // Modify the submitWord function to accept 2-letter words
+        // Modify the submitWord function to require 3-letter words
         function submitWord() {
-            if (state.selectedCells.length < 2) {
-                showNotification('Words must be at least 2 letters long.');
+            if (state.selectedCells.length < 3) {
+                showNotification('Words must be at least 3 letters long.');
                 flashInvalidWord();
                 return;
             }
@@ -876,7 +899,7 @@
                         const wordElements = wordListElement.querySelectorAll('.word-item');
                         wordElements[existingWordIndex].remove();
                         
-                        // Add the new version
+                        // Add the new version (will be prepended to the top of the list)
                         state.foundWords.push(word);
                         state.wordScores[word] = score;
                         addWordToDisplay(word, score);
@@ -904,11 +927,6 @@
                         wordCountElement.textContent = state.foundWords.length;
                     }
                     scoreElement.textContent = calculateTotalScore();
-                    
-                    // Check if player has reached the target score
-                    if (parseInt(scoreElement.textContent) >= state.targetScore) {
-                        endGame(true);
-                    }
                 });
             }
         }
@@ -921,7 +939,7 @@
             
             // Check for special bonuses for display text
             wordItem.textContent = `${word}: ${score} points`;
-            wordListElement.appendChild(wordItem);
+            wordListElement.prepend(wordItem); // Changed from appendChild to prepend
         }
         
         // Check if a word is valid
@@ -1284,6 +1302,26 @@
         function cleanupSingleTileSelection() {
             if (state.selectedCells.length === 1) {
                 clearSelection();
+            }
+        }
+
+        // Function to update timer display
+        function updateTimer() {
+            const minutes = Math.floor(state.timeRemaining / 60);
+            const seconds = state.timeRemaining % 60;
+            timerElement.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            
+            // Add warning colors when time is running low
+            if (state.timeRemaining <= 30 && state.timeRemaining > 10) {
+                timerElement.className = 'warning';
+            } else if (state.timeRemaining <= 10) {
+                timerElement.className = 'danger';
+            } else {
+                timerElement.className = '';
+            }
+            
+            if (state.timeRemaining <= 0) {
+                endGame(false);
             }
         }
 

@@ -1,4 +1,0 @@
-Fastest to X score instead of timer?
-Change how letters are randomized so there are more words.
-Change selection color because its hard to see on the DL and TL tiles.
-Make placement of bonus tiles static

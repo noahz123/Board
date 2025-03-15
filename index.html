@@ -1177,6 +1177,27 @@
         let touchMoved = false;
         let touchStartTime = 0;
         const TOUCH_MOVEMENT_THRESHOLD = 5;
+        const TOUCH_CENTER_THRESHOLD = 0.4; // Touch must be within 40% of center to register
+
+        // Helper function to check if a touch is near the center of a cell
+        function isTouchNearCellCenter(touch, cell) {
+            if (!cell || !cell.classList.contains('cell')) return false;
+            
+            const cellRect = cell.getBoundingClientRect();
+            const cellCenterX = cellRect.left + cellRect.width / 2;
+            const cellCenterY = cellRect.top + cellRect.height / 2;
+            
+            // Calculate distance from touch to cell center
+            const distanceX = Math.abs(touch.clientX - cellCenterX);
+            const distanceY = Math.abs(touch.clientY - cellCenterY);
+            
+            // Calculate the maximum allowed distance (as a percentage of cell size)
+            const maxDistanceX = cellRect.width * TOUCH_CENTER_THRESHOLD;
+            const maxDistanceY = cellRect.height * TOUCH_CENTER_THRESHOLD;
+            
+            // Touch is near center if both distances are less than the threshold
+            return distanceX <= maxDistanceX && distanceY <= maxDistanceY;
+        }
 
         boardElement.addEventListener('touchstart', (e) => {
             if (!state.gameActive) return;
@@ -1189,7 +1210,7 @@
                 const touch = e.touches[0];
                 const cell = document.elementFromPoint(touch.clientX, touch.clientY);
                 
-                if (cell && cell.classList.contains('cell')) {
+                if (cell && cell.classList.contains('cell') && isTouchNearCellCenter(touch, cell)) {
                     const row = parseInt(cell.dataset.row);
                     const col = parseInt(cell.dataset.col);
                     
@@ -1209,7 +1230,7 @@
                 const touch = e.touches[0];
                 const element = document.elementFromPoint(touch.clientX, touch.clientY);
                 
-                if (element && element.classList.contains('cell')) {
+                if (element && element.classList.contains('cell') && isTouchNearCellCenter(touch, element)) {
                     const row = parseInt(element.dataset.row);
                     const col = parseInt(element.dataset.col);
                     

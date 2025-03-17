@@ -30,7 +30,7 @@ def calculate_total_value(filename):
     return total
 
 if __name__ == "__main__":
-    filename = "solver.txt"
+    filename = "solutions.txt"
     result = calculate_total_value(filename)
     
     if result is not None:

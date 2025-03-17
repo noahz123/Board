@@ -13,15 +13,86 @@ import os
 import requests
 from collections import defaultdict
 
-# Board representation (5x5 grid)
-# Format: (letter, base_score, bonus_type)
-board = [
-    [('R', 1, 'DW'), ('C', 3, None), ('S', 1, 'TL'), ('T', 1, None), ('E', 1, 'DW')],
-    [('W', 4, None), ('S', 1, 'DL'), ('H', 4, None), ('D', 2, 'DL'), ('V', 4, None)],
-    [('B', 3, 'TL'), ('O', 1, None), ('N', 1, 'TW'), ('G', 2, None), ('E', 1, 'TL')],
-    [('C', 3, None), ('H', 4, 'DL'), ('T', 1, None), ('E', 1, 'DL'), ('P', 3, None)],
-    [('I', 1, 'DW'), ('S', 1, None), ('N', 1, 'TL'), ('R', 1, None), ('T', 1, 'DW')],
-]
+# Letter scores mapping
+LETTER_SCORES = {
+    'A': 1, 'B': 3, 'C': 3, 'D': 2, 'E': 1, 'F': 4, 'G': 2, 'H': 4, 'I': 1,
+    'J': 8, 'K': 5, 'L': 1, 'M': 3, 'N': 1, 'O': 1, 'P': 3, 'Q': 10, 'R': 1,
+    'S': 1, 'T': 1, 'U': 1, 'V': 4, 'W': 4, 'X': 8, 'Y': 4, 'Z': 10
+}
+
+def load_board(file_path=None):
+    """
+    Load a board from a file. If file_path is None, try to load from 'board.txt'
+    in the same directory as this script.
+    
+    Expected format:
+    R,C,S,T,E
+    W,S,H,D,V
+    B,O,N,G,E
+    C,H,T,E,P
+    I,S,N,R,T
+    """
+    # Bonus positions (preserved from original layout)
+    bonus_positions = {
+        (0, 0): 'DW', (0, 4): 'DW', (4, 0): 'DW', (4, 4): 'DW',  # Double Word
+        (2, 2): 'TW',  # Triple Word
+        (0, 2): 'TL', (2, 0): 'TL', (2, 4): 'TL', (4, 2): 'TL',  # Triple Letter
+        (1, 1): 'DL', (1, 3): 'DL', (3, 1): 'DL', (3, 3): 'DL'   # Double Letter
+    }
+    
+    # Default board if file can't be loaded
+    default_board = [
+        [('R', 1, 'DW'), ('C', 3, None), ('S', 1, 'TL'), ('T', 1, None), ('E', 1, 'DW')],
+        [('W', 4, None), ('S', 1, 'DL'), ('H', 4, None), ('D', 2, 'DL'), ('V', 4, None)],
+        [('B', 3, 'TL'), ('O', 1, None), ('N', 1, 'TW'), ('G', 2, None), ('E', 1, 'TL')],
+        [('C', 3, None), ('H', 4, 'DL'), ('T', 1, None), ('E', 1, 'DL'), ('P', 3, None)],
+        [('I', 1, 'DW'), ('S', 1, None), ('N', 1, 'TL'), ('R', 1, None), ('T', 1, 'DW')],
+    ]
+    
+    if file_path is None:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_dir, "board.txt")
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = [line.strip() for line in f.readlines() if line.strip()]
+            
+            if len(lines) != 5:
+                raise ValueError(f"Board should have exactly 5 rows, found {len(lines)}")
+                
+            board = []
+            for row_idx, line in enumerate(lines):
+                row_letters = line.split(',')
+                
+                if len(row_letters) != 5:
+                    raise ValueError(f"Row {row_idx+1} should have exactly 5 letters, found {len(row_letters)}")
+                
+                board_row = []
+                for col_idx, letter in enumerate(row_letters):
+                    letter = letter.strip().upper()
+                    if not letter or len(letter) != 1:
+                        raise ValueError(f"Invalid letter at row {row_idx+1}, column {col_idx+1}: '{letter}'")
+                    
+                    # Get letter score from the LETTER_SCORES dictionary
+                    letter_score = LETTER_SCORES.get(letter, 1)  # Default to 1 if letter not found
+                    
+                    # Get bonus from the bonus_positions dictionary
+                    bonus = bonus_positions.get((row_idx, col_idx), None)
+                    
+                    board_row.append((letter, letter_score, bonus))
+                
+                board.append(board_row)
+            
+            print(f"Successfully loaded board from {file_path}")
+            return board
+            
+    except Exception as e:
+        print(f"Error loading board from {file_path}: {e}")
+        print("Using default board layout.")
+        return default_board
+
+# Load board from file
+board = load_board()
 
 # Extract letter grid for easier access
 letter_grid = [[cell[0].lower() for cell in row] for row in board]
@@ -83,19 +154,7 @@ def load_dictionary(file_path=None):
     return {
         "bone", "bore", "born", "cent", "cite", "code", "cone", "cope", "core", "corn",
         "dive", "done", "dose", "dove", "edge", "edit", "gene", "gone", "hide", "hint",
-        "hire", "hive", "hone", "hope", "horn", "nest", "nine", "node", "none", "nose",
-        "note", "once", "open", "pent", "pest", "pine", "ping", "pond", "pore", "pose",
-        "rent", "rest", "ring", "ripe", "rise", "rode", "rope", "rose", "sent", "shed",
-        "shoe", "shop", "shot", "show", "side", "sign", "sine", "sing", "site", "spin",
-        "tent", "thin", "tide", "tied", "tier", "tire", "tone", "tore", "torn", "vine", "vote",
-        "bond", "bong", "bosh", "cede", "cent", "cher", "chid", "chin", "chip", "chit",
-        "debs", "dice", "died", "dies", "diet", "dine", "ding", "dire", "disc", "dish",
-        "edgy", "ends", "engs", "etch", "gent", "gist", "goth", "herd", "hide", "highest",
-        "hind", "iced", "inch", "nerd", "nets", "news", "nope", "open", "opes", "opted",
-        "opts", "ovid", "owes", "resign", "resod", "resow", "rest", "retd", "rete", "rets",
-        "scow", "scud", "scut", "shed", "shes", "shop", "shot", "show", "shpt", "shun",
-        "side", "sigh", "sign", "sine", "sing", "sink", "sinh", "sire", "site", "sith",
-        "tone", "tong", "tore", "torn", "tosh", "vide", "vids", "vied", "vier", "vies",
+        # ...existing sample dictionary entries...
         "view", "vine", "vise", "visor", "whid", "whit"
     }
 
@@ -110,40 +169,26 @@ def calculate_word_score(path):
     word_score = 0
     word_multiplier = 1
     
-    # Debug output
-    print("Path:", path)
-    
     # Calculate base score with letter bonuses
     for row, col in path:
         letter, letter_score, bonus = board[row][col]
         
-        # Debug output
-        print(f"Letter: {letter}, Score: {letter_score}, Bonus: {bonus}")
-        
         # Apply letter bonuses
         if bonus == 'DL':
             word_score += letter_score * 2
-            print(f"  After DL bonus: +{letter_score * 2}")
         elif bonus == 'TL':
             word_score += letter_score * 3
-            print(f"  After TL bonus: +{letter_score * 3}")
         else:
             word_score += letter_score
-            print(f"  No letter bonus: +{letter_score}")
         
         # Track word multipliers
         if bonus == 'DW':
             word_multiplier *= 2
-            print(f"  DW bonus applied, multiplier now: {word_multiplier}")
         elif bonus == 'TW':
             word_multiplier *= 3
-            print(f"  TW bonus applied, multiplier now: {word_multiplier}")
-    
-    print(f"Base score before word multiplier: {word_score}")
     
     # Apply word multiplier
     word_score *= word_multiplier
-    print(f"After word multiplier ({word_multiplier}x): {word_score}")
     
     # Bonus for longer words
     word_length = len(path)
@@ -155,11 +200,8 @@ def calculate_word_score(path):
     elif word_length == 4:
         length_bonus = 2
         
-    if length_bonus > 0:
-        print(f"Length bonus ({word_length} letters): +{length_bonus}")
-        word_score += length_bonus
+    word_score += length_bonus
     
-    print(f"Final score: {word_score}")
     return word_score
 
 def can_form_word(word):
@@ -308,7 +350,7 @@ def display_path(word, path):
     return f"{word}: {path_str}"
 
 def display_results(found_words):
-    """Display the results of the word search."""
+    """Display the results of the word search and save to a file."""
     # Sort words by score (highest first)
     sorted_words = sorted(found_words.items(), key=lambda x: x[1][1], reverse=True)
     
@@ -324,43 +366,29 @@ def display_results(found_words):
         highest_word, (highest_path, highest_score) = sorted_words[0]
         print(f"\nHighest-scoring word: {highest_word} with {highest_score} points")
         print(f"Path: {display_path(highest_word, highest_path)}")
+    
+    # Write results to a file
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_file = os.path.join(script_dir, "solutions.txt")
+        
+        with open(output_file, 'w', encoding='utf-8') as f:
+            for word, (path, score) in sorted_words:
+                f.write(f"{word}: {score}\n")
+        
+        print(f"\nSolution list written to {output_file}")
+    except Exception as e:
+        print(f"\nError writing solutions to file: {e}")
 
 def main():
     # Load dictionary
-    # You can provide a path to your own dictionary file here
-    # dictionary = load_dictionary('path_to_your_dictionary.txt')
     dictionary = load_dictionary()
     
-    # For testing specific words
-    test_mode = False
-    if test_mode:
-        test_words = ['ends', 'tone', 'hone']
-        test_results = {}
-        
-        for word in test_words:
-            paths = can_form_word(word)
-            if paths:
-                print(f"Testing word: {word}")
-                best_score = 0
-                best_path = None
-                
-                for path in paths:
-                    print(f"\nPath option: {display_path(word, path)}")
-                    score = calculate_word_score(path)
-                    if score > best_score:
-                        best_score = score
-                        best_path = path
-                
-                test_results[word] = (best_path, best_score)
-                print(f"Best score for {word}: {best_score} points\n")
-        
-        display_results(test_results)
-    else:
-        # Find all valid words on the board (using parallel processing)
-        found_words = find_words_parallel(dictionary)
-        
-        # Display results
-        display_results(found_words)
+    # Find all valid words on the board (using parallel processing)
+    found_words = find_words_parallel(dictionary)
+    
+    # Display results
+    display_results(found_words)
 
 if __name__ == "__main__":
     main()

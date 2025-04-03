@@ -17,8 +17,6 @@ import requests
 import random
 import argparse
 from collections import defaultdict
-import firebase_admin
-from firebase_admin import credentials, storage
 import datetime
 import pytz
 import schedule

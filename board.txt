@@ -1,5 +1,5 @@
-E,N,O,P,N
-E,D,O,J,O
-P,N,F,H,E
-I,R,O,A,I
-O,A,A,T,E
+E,R,N,T,R
+F,B,E,E,T
+L,H,T,A,N
+H,P,I,E,S
+H,D,D,S,T

@@ -5,6 +5,7 @@ Word Game Utility
 A combined script that provides functionality to:
 1. Generate a random game board
 2. Solve an existing game board
+3. Upload board and solutions to Firebase storage
 """
 
 import concurrent.futures
@@ -15,6 +16,9 @@ import requests
 import random
 import argparse
 from collections import defaultdict
+import firebase_admin
+from firebase_admin import credentials, storage
+import datetime
 
 # Letter scores mapping
 LETTER_SCORES = {
@@ -464,16 +468,87 @@ def solve_board(board_file=None, dict_file=None, threads=None):
     # Display results
     display_results(found_words, board)
 
+def initialize_firebase():
+    """Initialize Firebase app with credentials."""
+    # Firebase configuration
+    firebase_config = {
+        "apiKey": "AIzaSyCgBulWvIiylEBGbsjh0E-iE4yJonbzOew",
+        "authDomain": "babble-game.firebaseapp.com",
+        "projectId": "babble-game",
+        "storageBucket": "babble-game.firebasestorage.app",  # Use the exact bucket name from GS URL
+        "messagingSenderId": "679961772786",
+        "appId": "1:679961772786:web:a836cab9bfc84b3289466b",
+        "measurementId": "G-SQ2BQMP637",
+        "databaseURL": "https://babble-game-default-rtdb.firebaseio.com"  # Required by pyrebase
+    }
+    
+    try:
+        import pyrebase
+        
+        # Initialize Pyrebase with the provided config
+        firebase = pyrebase.initialize_app(firebase_config)
+        
+        # Get storage reference
+        return firebase.storage()
+    except Exception as e:
+        print(f"Error initializing Firebase: {str(e)}")
+        return None
+
+def upload_file_to_firebase(local_file_path, remote_file_path=None):
+    """Upload a file to Firebase Storage."""
+    try:
+        # Get firebase storage
+        firebase_storage = initialize_firebase()
+        
+        if not firebase_storage:
+            print("Failed to initialize Firebase storage")
+            return False
+        
+        # If remote path not specified, use the local filename
+        if not remote_file_path:
+            remote_file_path = os.path.basename(local_file_path)
+        
+        # Upload to the main file (without date) for easy access
+        firebase_storage.child(remote_file_path).put(local_file_path)
+        
+        print(f"Uploaded {local_file_path} to Firebase Storage as {remote_file_path}")
+        return True
+    except Exception as e:
+        print(f"Error uploading file to Firebase: {str(e)}")
+        return False
+
+def upload_board_and_solutions():
+    """Upload board.txt and solutions.txt to Firebase Storage."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    board_path = os.path.join(script_dir, "board.txt")
+    solutions_path = os.path.join(script_dir, "solutions.txt")
+    
+    # Upload board.txt
+    if os.path.exists(board_path):
+        upload_file_to_firebase(board_path, "board.txt")
+    else:
+        print(f"Warning: {board_path} does not exist. Cannot upload board file.")
+    
+    # Upload solutions.txt
+    if os.path.exists(solutions_path):
+        upload_file_to_firebase(solutions_path, "solutions.txt")
+    else:
+        print(f"Warning: {solutions_path} does not exist. Cannot upload solutions file.")
+
 def main():
     """Main function with command line interface."""
     parser = argparse.ArgumentParser(description='Word Game Utility')
-    parser.add_argument('action', choices=['generate', 'solve', 'both'], 
-                        help='Action to perform: generate a board, solve a board, or both', default='both')
+    parser.add_argument('action', choices=['generate', 'solve', 'both', 'upload'], 
+                        help='Action to perform: generate a board, solve a board, both, or upload files',
+                        default='schedule', nargs='?')  # Changed default from 'both' to 'schedule'
     parser.add_argument('-b', '--board-file', type=str, help='Path to board file (for solve action)', default='board.txt')
     parser.add_argument('-d', '--dict-file', type=str, help='Path to dictionary file (for solve action)', default='dictionary.txt')
-    parser.add_argument('-t', '--threads', type=int, help='Number of threads for solving (default: number of CPU cores)', default=10)
+    parser.add_argument('-t', '--threads', type=int, help='Number of threads for solving (default: number of CPU cores)', default=None)
+    parser.add_argument('-u', '--upload', action='store_true', dest='upload', 
+                        help='Upload board and solutions to Firebase')
     
     args = parser.parse_args()
+    args.upload = True if not hasattr(args, 'upload') else args.upload
     
     if args.action == 'generate' or args.action == 'both':
         generate_and_save()
@@ -481,6 +556,11 @@ def main():
     
     if args.action == 'solve' or args.action == 'both':
         solve_board(args.board_file, args.dict_file, args.threads)
+    
+    # Upload files to Firebase if enabled (default) or if action is 'upload'
+    if args.upload or args.action == 'upload':
+        print("\nUploading files to Firebase...")
+        upload_board_and_solutions()
 
 if __name__ == "__main__":
     main()
